@@ -35,6 +35,7 @@ plot_ion_flux = True
 plot_wind = True
 plot_uv_slope = True
 plot_ew = True
+plot_colours = True
 
 save_output = True
 
@@ -45,10 +46,9 @@ plot_spectral_types = False
 plot_hires_spectra = False
 plot_SN_rate = False
 plot_new_hires = False
-plot_colours = False
 
 if save_output == True:
-    SBmodel_name = 'pySB_test' #set the output folder name here!
+    SBmodel_name = 'pySB_test_Jul15' #set the output folder name here!
     os.mkdir(SBmodel_name)
 
 '''Load input files based on chosen metallicity and mass limits'''
@@ -2166,4 +2166,36 @@ if plot_ew == True:
                 np.savetxt(SBmodel_name + '/Hbew.txt', population_Hb_ew)
                 np.savetxt(SBmodel_name + '/Pbew.txt', population_Pb_ew)
                 np.savetxt(SBmodel_name + '/Bgew.txt', population_Bg_ew)
+                
+if plot_colours == True:
+    
+    fig=plt.figure()
+    plt.style.use('default')
+    ax=fig.add_subplot(111)
+    ax.plot(times_steps_log, population_absVmag, label='pySB $M_{V}$')
+    plt.xlim(6.,8.)
+    #plt.ylim(44.,54.)
+    ax.invert_yaxis()
+    plt.title('Evolution of $M_{V}$', fontsize=12)
+    plt.xlabel('Time', fontsize=12)
+    plt.ylabel('$M_{V}$', fontsize=12)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+
+    colours_output = np.column_stack((population_Vmag, population_Umag, population_Imag, population_Bmag, population_absVmag))
+    colours_header = 'V, U, I, B, M_V'
+    
+    if save_output == True:
+        if IMF_mass_limits[-1] > 120.:
+            if rot == True:
+                np.savetxt(SBmodel_name + '/rotVMS_colours.txt', colours_output, header=colours_header)
+                
+            else:
+                np.savetxt(SBmodel_name + '/VMS_colours.txt', colours_output, header=colours_header)
+        else:
+            if rot == True:
+                np.savetxt(SBmodel_name + '/rot_colours.txt', colours_output, header=colours_header)
+            else:
+                np.savetxt(SBmodel_name + '/colours.txt', colours_output, header=colours_header)
                 
