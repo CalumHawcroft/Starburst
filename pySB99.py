@@ -27,8 +27,8 @@ IMF_mass_limits = 0.1, 0.5, 120.
 #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
 run_speed_mode = 'FAST' #should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
 
-Z = 'MW' #Z options are MWC, MW, LMC, SMC, IZw18 and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
-SPEC = 'WM' #options are FW and WM which refer to the Fastwind and WMbasic OB spectral libraries
+Z = 'SMC' #Z options are MWC, MW, LMC, SMC, IZw18 and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
+SPEC = 'FW' #options are FW and WM which refer to the Fastwind and WMbasic OB spectral libraries
 rot = False #options are True to use tracks with 0.4v_critical rotation or False for non-rotating tracks
 
 plot_ion_flux = True
@@ -48,7 +48,7 @@ plot_SN_rate = False
 plot_new_hires = False
 
 if save_output == True:
-    SBmodel_name = 'pySB_test_Jul15' #set the output folder name here!
+    SBmodel_name = 'test_aug4' #set the output folder name here!
     os.mkdir(SBmodel_name)
 
 '''Load input files based on chosen metallicity and mass limits'''
@@ -1776,6 +1776,7 @@ population_Hb_ew = []
 population_Pb_ew = []
 population_Bg_ew = []
 population_flux_total_iterations = []
+population_flux_total_iterations_send = []
 population_Vmag = []
 population_Umag = []
 population_Imag = []
@@ -1828,6 +1829,7 @@ for i in range(len(times_steps)):
     population_Bg_ew.append(timestep_Bg_ew)
     population_flux_total_iterations.append(population_flux_total)
     timestep_Vmag, timestep_Umag, timestep_Imag, timestep_Bmag, timestep_absVmag = colours(population_flux_total)
+    population_flux_total_iterations_send.append(np.log10(population_flux_total)+20.)
     population_Vmag.append(timestep_Vmag)
     population_Umag.append(timestep_Umag)
     population_Imag.append(timestep_Imag)
@@ -1934,8 +1936,9 @@ if save_output == True:
             inputs_file.write('Equivalent width output choice = True' + '\n')
         if plot_ew == False:
             inputs_file.write('Equivalent with output output choice = False' + '\n')
-    
-    np.save(SBmodel_name + '/pySB_SEDs.npy', np.column_stack((population_flux_iterations_send, population_flux_total_iterations)))
+
+    np.save(SBmodel_name + '/pySB_SED_stellar.npy', population_flux_iterations_send)
+    np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send)
     np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
 else:
     print('M_total = ' + str(M_total) + 'Msol')   
