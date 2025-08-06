@@ -26,11 +26,11 @@ IMF_mass_limits = 0.1, 0.5, 120.
 
 #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
 run_speed_mode = 'FAST' #should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
-Z = 'MWC' 
+# Z = 'MWC' 
 # Z = 'MW' 
 # Z = 'LMC' 
 # Z = 'SMC' 
-# Z = 'IZw18' 
+Z = 'IZw18' 
 # Z = 'Z0' 
 
 #Z options are MWC, MW, LMC, SMC, IZw18 and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
@@ -59,7 +59,8 @@ plot_new_hires = False
 plot_colours = False
 
 if save_output == True:
-    SBmodel_name = 'pySB_test_Jul15' #set the output folder name here!
+    SBmodel_name = '5e4_120_IZw18' #set the output folder name here!
+
     os.mkdir(SBmodel_name)
 
 '''Load input files based on chosen metallicity and mass limits'''
@@ -1393,7 +1394,16 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
     mdot_vink00 = []
     mdot_leuven = []
     vinf_xshootu = []
-
+    mdot_WR = []
+    mdot_LBV = []
+    mdot_LM = [] #low mass
+    mdot_OB = []
+    mdot_RM = [] #remainder (RSGs etc?)
+    vinf_WR = []
+    vinf_LBV = []
+    vinf_LM = []
+    vinf_OB = []
+    vinf_RM = []
     for i in range(len(timestep_temps)):
 
         if timestep_lums[i] == -20.0:
@@ -1401,14 +1411,34 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
             vinf_vink21i=0.
             mdot_vink00i=timestep_mdot[i]
             mdot_leuveni=timestep_mdot[i]
+            mdot_WRi=0.
+            mdot_LBVi=0.
+            mdot_LMi=0.
+            mdot_OBi=0.
+            mdot_RMi=10.**timestep_mdot[i]
             vinf_xshootui=0.
+            vinf_WRi=0.
+            vinf_LBVi=0.
+            vinf_LMi=0.
+            vinf_OBi=0.
+            vinf_RMi=0.
 
         elif timestep_temps[i] < 4.4 and timestep_temps[i] > 3.75 and timestep_mdot[i] > -3.5: #LBVs
             vinf=200.
             vinf_vink21i=200.
             mdot_vink00i=timestep_mdot[i]
             mdot_leuveni=timestep_mdot[i]
+            mdot_WRi=0.
+            mdot_LBVi=10.**timestep_mdot[i]
+            mdot_LMi=0.
+            mdot_OBi=0.
+            mdot_RMi=0.
             vinf_xshootui=200.
+            vinf_WRi=0.
+            vinf_LBVi=200.
+            vinf_LMi=0.
+            vinf_OBi=0.
+            vinf_RMi=0.
 
 
         elif timestep_temps[i] < 3.9:# and initial_masses[i] < OB_limit_mass: #low mass stars
@@ -1416,7 +1446,17 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
             vinf_vink21i = 30.
             mdot_vink00i=timestep_mdot[i]
             mdot_leuveni=timestep_mdot[i]
+            mdot_WRi=0.
+            mdot_LBVi=0.
+            mdot_LMi=10.**timestep_mdot[i]
+            mdot_OBi=0.
+            mdot_RMi=0.
             vinf_xshootui=30.
+            vinf_WRi=0.
+            vinf_LBVi=0.
+            vinf_LMi=30.
+            vinf_OBi=0.
+            vinf_RMi=0.
 
 #            vinfs.append(vinf)
 #            vinfs.append(vinf)
@@ -1427,35 +1467,85 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
                 vinf_vink21i=1650.
                 mdot_vink00i=timestep_mdot[i]
                 mdot_leuveni=timestep_mdot[i]
+                mdot_WRi=10.**timestep_mdot[i]
+                mdot_LBVi=0.
+                mdot_LMi=0.
+                mdot_OBi=0.
+                mdot_RMi=0.
                 vinf_xshootui=1650.
+                vinf_WRi=1650.
+                vinf_LBVi=0.
+                vinf_LMi=0.
+                vinf_OBi=0.
+                vinf_RMi=0.
 #                vinfs.append(vinf)
             if timestep_cnr[i] < 10.:
                 vinf=1900.
                 vinf_vink21i=1900.
                 mdot_vink00i=timestep_mdot[i]
                 mdot_leuveni=timestep_mdot[i]
+                mdot_WRi=10.**timestep_mdot[i]
+                mdot_LBVi=0.
+                mdot_LMi=0.
+                mdot_OBi=0.
+                mdot_RMi=0.
                 vinf_xshootui=1900.
+                vinf_WRi=1900.
+                vinf_LBVi=0.
+                vinf_LMi=0.
+                vinf_OBi=0.
+                vinf_RMi=0.
 #                vinfs.append(vinf)
             if timestep_coher[i] < 0.5:
                 vinf=1800.
                 vinf_vink21i=1800.
                 mdot_vink00i=timestep_mdot[i]
                 mdot_leuveni=timestep_mdot[i]
+                mdot_WRi=10.**timestep_mdot[i]
+                mdot_LBVi=0.
+                mdot_LMi=0.
+                mdot_OBi=0.
+                mdot_RMi=0.
                 vinf_xshootui=1800.
+                vinf_WRi=1800.
+                vinf_LBVi=0.
+                vinf_LMi=0.
+                vinf_OBi=0.
+                vinf_RMi=0.
 #                vinfs.append(vinf)
             if timestep_coher[i] < 1.:
                 vinf=2800.
                 vinf_vink21i=2800.
                 mdot_vink00i=timestep_mdot[i]
                 mdot_leuveni=timestep_mdot[i]
+                mdot_WRi=10.**timestep_mdot[i]
+                mdot_LBVi=0.
+                mdot_LMi=0.
+                mdot_OBi=0.
+                mdot_RMi=0.
                 vinf_xshootui=2800.
+                vinf_WRi=2800.
+                vinf_LBVi=0.
+                vinf_LMi=0.
+                vinf_OBi=0.
+                vinf_RMi=0.
 #                vinfs.append(vinf)
             if timestep_coher[i] >= 1.:
                 vinf=3500.
                 vinf_vink21i=3500.
                 mdot_vink00i=timestep_mdot[i]
                 mdot_leuveni=timestep_mdot[i]
+                mdot_WRi=10.**timestep_mdot[i]
+                mdot_LBVi=0.
+                mdot_LMi=0.
+                mdot_OBi=0.
+                mdot_RMi=0.
                 vinf_xshootui=3500.
+                vinf_WRi=3500.
+                vinf_LBVi=0.
+                vinf_LMi=0.
+                vinf_OBi=0.
+                vinf_RMi=0.
 #                vinfs.append(vinf)
 
         elif timestep_temps[i] > 3.9:# and timestep_H[i] > 0.4 and initial_masses[i] > OB_limit_mass: #OB stars
@@ -1465,6 +1555,17 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
             vinf=618.*np.sqrt(timestep_masses[i] /  (10.**(0.5*timestep_lums[i] - 2.*timestep_temps[i] + 7.52))*gamma0) * (0.58 + 2.04*(0.5*timestep_lums[i] - 2.*timestep_temps[i] + 7.52))
             #timestep_mdot[i] = np.log10((10**timestep_mdot[i])/3)
             timestep_mdot[i] = np.log10((10**timestep_mdot[i]))
+            mdot_WRi=0.
+            mdot_LBVi=0.
+            mdot_LMi=0.
+            mdot_OBi=10.**timestep_mdot[i]
+            mdot_RMi=0.
+            vinf_WRi=0.
+            vinf_LBVi=0.
+            vinf_LMi=0.
+            vinf_OBi=vinf
+            vinf_RMi=0.
+                
             mdot_leuveni = -5.52 + 2.39*np.log10((10**timestep_lums[i])/(10**6)) -1.48*np.log10(timestep_masses[i]/45.) + 2.12*np.log10(timestep_teffs[i]/45000.) + ( 0.75 - 1.87*np.log10(timestep_teffs[i]/40000.) )*np.log10(1./1.)
             vinf_xshootui = 0.092*timestep_teffs[i] - 1040.0*1.0**0.22
 
@@ -1486,14 +1587,38 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
             vinf_vink21i=0.
             mdot_vink00i=timestep_mdot[i]
             mdot_leuveni=timestep_mdot[i]
+            mdot_WRi=0.
+            mdot_LBVi=0.
+            mdot_LMi=0.
+            mdot_OBi=0.
+            mdot_RMi=10.**timestep_mdot[i] #NEED TO ADD THESE ARRAYS LATER
             vinf_xshootui=0.
+            vinf_WRi=0.
+            vinf_LBVi=0.
+            vinf_LMi=0.
+            vinf_OBi=0.
+            vinf_RMi=0.
 
         vinf_vink21.append(vinf_vink21i)
         mdot_vink00.append(mdot_vink00i)
         mdot_leuven.append(mdot_leuveni)
-
+        # if mdot_WRi != 0. :
+        #     print("Mdot_WR nonzero")
+        mdot_WR.append(mdot_WRi)
+        mdot_LBV.append(mdot_LBVi)
+        mdot_LM.append(mdot_LMi)
+        mdot_OB.append(mdot_OBi)
+        mdot_RM.append(mdot_RMi)
         vinfs.append(vinf)
         vinf_xshootu.append(vinf_xshootui)
+        vinf_WR.append(vinf_WRi)
+        vinf_LBV.append(vinf_LBVi)
+        vinf_LM.append(vinf_LMi)
+        vinf_OB.append(vinf_OBi)
+        vinf_RM.append(vinf_RMi)
+        # print("Vinf_OB = ",vinf_OB)
+        # if i==0:
+        #     print("Vinf_OB = ",vinf_OB)
 
     if Z == 'MWC':
         Z_value = 1.4285
@@ -1510,6 +1635,16 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
 
     #vinfs_Z = np.array(vinfs)* (Z_value**0.22)
     vinfs_Z = np.array(vinfs)* (Z_value**0.13)
+    # print("vinfs_Z: ",vinfs_Z)
+    vinfs_Z_WR = np.array(vinf_WR)* (Z_value**0.13)
+    vinfs_Z_LBV = np.array(vinf_LBV)* (Z_value**0.13)
+    vinfs_Z_LM = np.array(vinf_LM)* (Z_value**0.13)
+    vinfs_Z_OB = np.array(vinf_OB)* (Z_value**0.13)
+    vinfs_Z_RM = np.array(vinf_RM)* (Z_value**0.13)
+
+
+
+
     vinf_xshootu = np.array(vinf_xshootu) * (Z_value**0.22)
     #vinfs_Z = np.array(vinfs)* (Z**0.13)
 
@@ -1525,15 +1660,35 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
     vinf_vink21 = np.array(vinf_vink21)
     mdot_vink00 = np.array(mdot_vink00)
     mdot_leuven = np.array(mdot_leuven)
+    mdot_WR = np.array(mdot_WR)
+    mdot_LBV = np.array(mdot_LBV)
+    mdot_LM = np.array(mdot_LM)
+    mdot_OB = np.array(mdot_OB)
+    mdot_RM = np.array(mdot_RM)
+    # print("timestep_mdot = ",timestep_mdot)
+    # print("mdot_WR = ", mdot_WR)
+    # print("No_stars = ", No_stars)
 
     wind_power = (10.**timestep_mdot) * vinfs_Z**2 * 3.155
     wind_mom = 2 * (10.**timestep_mdot) * vinfs_Z * 3.155e-5
     wind_mdot = 10.**timestep_mdot
+    wind_mdot_WR = mdot_WR #I'm keeping it consistent in case we make it more elegant later on
+    wind_mdot_LBV = mdot_LBV
+    wind_mdot_LM = mdot_LM 
+    wind_mdot_OB = mdot_OB
+    wind_mdot_RM = mdot_RM
     wind_vinf = vinfs_Z
     wind_mom_vink = 2 * (10.**mdot_vink00) * vinf_vink21 * 3.155e-5
     wind_mom_leuven = 2 * (10.**mdot_leuven) * vinfs_Z * 3.155e-5
     wind_mom_xshootu = 2 * (10.**np.array(timestep_mdot_weakwind)) * vinf_xshootu * 3.155e-5
     wind_power_xshootu = (10.**np.array(timestep_mdot)) * vinf_xshootu**2 * 3.155
+    wind_power_WR = wind_mdot_WR * vinfs_Z_WR**2 * 3.155
+    wind_power_LBV = wind_mdot_LBV * vinfs_Z_LBV**2 * 3.155
+    wind_power_LM = wind_mdot_LM * vinfs_Z_LM**2 * 3.155
+    wind_power_OB = wind_mdot_OB * vinfs_Z_OB**2 * 3.155
+    wind_power_RM = wind_mdot_RM * vinfs_Z_RM**2 * 3.155
+
+
 
     wind_power_calc =  wind_power * No_stars
     wind_mom_calc =  wind_mom * No_stars
@@ -1542,6 +1697,17 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
     wind_mom_xshootu_calc = wind_mom_xshootu * No_stars
     wind_power_xshootu_calc = wind_power_xshootu * No_stars
     wind_mdot_calc = wind_mdot * No_stars # Calculate Mdot from stars
+    wind_mdot_WR_calc = wind_mdot_WR * No_stars
+    wind_mdot_LBV_calc = wind_mdot_LBV * No_stars
+    wind_mdot_LM_calc = wind_mdot_LM * No_stars 
+    wind_mdot_OB_calc = wind_mdot_OB * No_stars
+    wind_mdot_RM_calc = wind_mdot_RM * No_stars
+
+    wind_power_WR_calc =  wind_power_WR * No_stars
+    wind_power_LBV_calc =  wind_power_LBV * No_stars
+    wind_power_LM_calc =  wind_power_LM * No_stars
+    wind_power_OB_calc =  wind_power_OB * No_stars
+    wind_power_RM_calc =  wind_power_RM * No_stars
 
     wind_power_sum = np.sum(wind_power_calc)
     wind_mom_sum = np.sum(wind_mom_calc)
@@ -1550,8 +1716,18 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
     wind_mom_xshootu_sum = np.sum(wind_mom_xshootu_calc)
     wind_power_xshootu_sum = np.sum(wind_power_xshootu_calc)
     wind_mdot_sum = np.sum(wind_mdot_calc) # Total mdot
+    wind_mdot_WR_sum = np.sum(wind_mdot_WR_calc)
+    wind_mdot_LBV_sum = np.sum(wind_mdot_LBV_calc)
+    wind_mdot_LM_sum = np.sum(wind_mdot_LM_calc)
+    wind_mdot_OB_sum = np.sum(wind_mdot_OB_calc)
+    wind_mdot_RM_sum = np.sum(wind_mdot_RM_calc)
+    wind_power_WR_sum = np.sum(wind_power_WR_calc)
+    wind_power_LBV_sum = np.sum(wind_power_LBV_calc)
+    wind_power_LM_sum = np.sum(wind_power_LM_calc)
+    wind_power_OB_sum = np.sum(wind_power_OB_calc)
+    wind_power_RM_sum = np.sum(wind_power_RM_calc)
 
-    
+
     wpower = np.log10(wind_power_sum +1e-30) + 35.
     wmom = np.log10(wind_mom_sum +1e-30) + 35.
     wmom_vink = np.log10(wind_mom_vink_sum +1e-30) + 35.
@@ -1559,8 +1735,21 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
     wmom_xshootu = np.log10(wind_mom_xshootu_sum +1e-30) + 35.
     wpower_xshootu = np.log10(wind_power_xshootu_sum +1e-30) + 35.
     mdot_out = wind_mdot_sum #Count total mass lost, added here again for consistency
+    mdot_WR_out = wind_mdot_WR_sum
+    mdot_LBV_out = wind_mdot_LBV_sum
+    mdot_LM_out = wind_mdot_LM_sum
+    mdot_OB_out = wind_mdot_OB_sum
+    mdot_RM_out = wind_mdot_RM_sum
+    wpower_WR_out = np.log10(wind_power_WR_sum +1e-30) + 35.
+    wpower_LBV_out = np.log10(wind_power_LBV_sum +1e-30) + 35.
+    wpower_LM_out = np.log10(wind_power_LM_sum +1e-30) + 35.
+    wpower_OB_out = np.log10(wind_power_OB_sum +1e-30) + 35.
+    wpower_RM_out = np.log10(wind_power_RM_sum +1e-30) + 35.
 
-    return(vinfs_Z, wind_power_calc, wpower, wind_mom_calc, wmom, wmom_vink, vinf_vink21, mdot_vink00, timestep_vesc, wmom_leuven, wmom_xshootu, wpower_xshootu, mdot_out) # New parameters added
+    return(vinfs_Z, wind_power_calc, wpower, wind_mom_calc, wmom, wmom_vink, 
+           vinf_vink21, mdot_vink00, timestep_vesc, wmom_leuven, wmom_xshootu, 
+           wpower_xshootu, mdot_out, mdot_WR_out, mdot_LBV_out, mdot_LM_out, mdot_OB_out, 
+           mdot_RM_out, wpower_WR_out, wpower_LBV_out, wpower_LM_out, wpower_OB_out, wpower_RM_out) # New parameters added
 
 def get_uv_slope(uv_wave, uv_flux):
     '''Input wave and flux in log'''
@@ -1764,7 +1953,17 @@ population_windmoms_calc = []
 population_windpowers = []
 population_windpowers_calc = []
 population_windpowers_xshootu = []
-population_mdots_new = []
+population_windpowers_WR = []
+population_windpowers_LBV = []
+population_windpowers_LM = []
+population_windpowers_OB = []
+population_windpowers_RM = []
+population_mdots_new = [] # New lists for total and subtype mass loss
+population_mdots_new_WR = []
+population_mdots_new_LBV = []
+population_mdots_new_LM = []
+population_mdots_new_OB = []
+population_mdots_new_RM = []
 population_co_tests = []
 population_specsyn_loggs = []
 population_specsyn_teffs = []
@@ -1815,7 +2014,7 @@ for i in range(len(times_steps)):
 #    population_flux = specsyn(assigned_integrated_spectra, specsyn_bbfluxes, assigned_spectra, timestep_radii_final)
 #    population_flux = specsyn(assigned_integrated_spectra, specsyn_bbfluxes, assigned_spectra, timestep_radii_final)
     population_flux, assigned_flux_scaled = specsyn(assigned_integrated_spectra, specsyn_bbfluxes, assigned_spectra, specsyn_radii, No_stars)
-    timestep_vinfs, timestep_windpowers_calc, timestep_windpowers, timestep_windmoms_calc, timestep_windmoms, timestep_windmoms_vink, timestep_vinfs_vink, timestep_mdots_vink, timestep_vescs, timestep_windmoms_leuven, timestep_windmoms_xshootu, timestep_windpowers_xshootu, timestep_mdot_new = calc_wind(timestep_temps_final, timestep_lums_final, timestep_masses_final, timestep_mass_loss_rates_final, timestep_H_abundances_final, timestep_12C_abundances_final, timestep_14N_abundances_final, timestep_16O_abundances_final, initial_masses, No_stars, timestep_radii_final, timestep_cnr) # New params added
+    timestep_vinfs, timestep_windpowers_calc, timestep_windpowers, timestep_windmoms_calc, timestep_windmoms, timestep_windmoms_vink, timestep_vinfs_vink, timestep_mdots_vink, timestep_vescs, timestep_windmoms_leuven, timestep_windmoms_xshootu, timestep_windpowers_xshootu, timestep_mdot_new, timestep_mdot_new_WR, timestep_mdot_new_LBV, timestep_mdot_new_LM, timestep_mdot_new_OB, timestep_mdot_new_RM, timestep_windpowers_WR, timestep_windpowers_LBV, timestep_windpowers_LM, timestep_windpowers_OB, timestep_windpowers_RM = calc_wind(timestep_temps_final, timestep_lums_final, timestep_masses_final, timestep_mass_loss_rates_final, timestep_H_abundances_final, timestep_12C_abundances_final, timestep_14N_abundances_final, timestep_16O_abundances_final, initial_masses, No_stars, timestep_radii_final, timestep_cnr) # New params added
 
     #spt_temp, spt_lum, spt, lc = spectype(timestep_temps_final, timestep_lums_final)
     population_flux_iterations.append(population_flux)
@@ -1904,12 +2103,22 @@ for i in range(len(times_steps)):
     population_windmoms_leuven.append(timestep_windmoms_leuven)
     population_windmoms_xshootu.append(timestep_windmoms_xshootu)
     population_windpowers_xshootu.append(timestep_windpowers_xshootu)
-    population_mdots_new.append(timestep_mdot_new) # new param added
+    population_mdots_new.append(timestep_mdot_new) # Appending total and subtype mdots
+    population_mdots_new_WR.append(timestep_mdot_new_WR) 
+    population_mdots_new_LBV.append(timestep_mdot_new_LBV)
+    population_mdots_new_LM.append(timestep_mdot_new_LM)
+    population_mdots_new_OB.append(timestep_mdot_new_OB)
+    population_mdots_new_RM.append(timestep_mdot_new_RM)
     population_vinfs_vink.append(timestep_vinfs_vink)
     population_mdots_vink.append(timestep_mdots_vink)
     population_windmoms_calc.append(timestep_windmoms_calc)
     population_windpowers.append(timestep_windpowers)
     population_windpowers_calc.append(timestep_windpowers_calc)
+    population_windpowers_WR.append(timestep_windpowers_WR)
+    population_windpowers_LBV.append(timestep_windpowers_LBV)
+    population_windpowers_LM.append(timestep_windpowers_LM)
+    population_windpowers_OB.append(timestep_windpowers_OB)
+    population_windpowers_RM.append(timestep_windpowers_RM)
     population_co_tests.append(specsyn_cotests)
     population_specsyn_loggs.append(specsyn_loggs)
     population_specsyn_teffs.append(specsyn_teffs)
@@ -2081,6 +2290,29 @@ if plot_wind == True:
     plt.legend()
     plt.savefig(SBmodel_name + '/windpow.pdf',dpi=400,bbox_inches='tight') 
     plt.show()
+
+    fig=plt.figure()
+    plt.style.use('default')
+    ax=fig.add_subplot(111)
+    plt.ylim(1e34,1e42)
+    ax.plot(times_steps_log, 10.**(np.array(population_windpowers_WR)), label='WR')
+    ax.plot(times_steps_log, 10.**(np.array(population_windpowers_LBV)), label='LBV')
+    ax.plot(times_steps_log, 10.**(np.array(population_windpowers_LM)), label='LM')
+    ax.plot(times_steps_log, 10.**(np.array(population_windpowers_OB)), label='OB')
+    ax.plot(times_steps_log, 10.**(np.array(population_windpowers_RM)), label='RM')
+
+    ax.plot(times_steps_log, 10.**(np.array(population_windpowers)), label='Total')
+    
+    plt.xlim(6.,7.25)
+    # plt.ylim(34.,42.)
+    plt.yscale("log")
+    plt.title('Wind Power over Time', fontsize=12)
+    plt.xlabel('Time', fontsize=12)
+    plt.ylabel('Wind Power [erg/sec]', fontsize=12)
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig(SBmodel_name + '/windpow_spt.pdf',dpi=400,bbox_inches='tight') 
+    plt.show()
     
     fig=plt.figure()
     plt.style.use('default')
@@ -2104,23 +2336,88 @@ if plot_wind == True:
     ax=fig.add_subplot(111)
 #     massload = 2500 * ((np.array(population_windpowers)/1e39)**0.5) * (np.array(population_mdots_new)/5e-4)**(-0.5)
     popwind = np.array(population_windpowers)
+    popwind_WR = np.array(population_windpowers_WR)
     popmdot = np.array(population_mdots_new)
+    popmdot_WR = np.array(population_mdots_new_WR)
+    popmdot_LBV = np.array(population_mdots_new_LBV)
+    popmdot_LM = np.array(population_mdots_new_LM)
+    popmdot_OB = np.array(population_mdots_new_OB)
+    popmdot_RM = np.array(population_mdots_new_RM)
+
     popmdot_cgs = popmdot*6.307e25
+    popmdot_WR_cgs = popmdot_WR*6.307e25
+    popmdot_LBV_cgs = popmdot_LBV*6.307e25
+    popmdot_LM_cgs = popmdot_LM*6.307e25
+    popmdot_OB_cgs = popmdot_OB*6.307e25
+    popmdot_RM_cgs = popmdot_RM*6.307e25
+
     massload = np.sqrt(10**popwind/popmdot_cgs)
+    massload_WR = np.sqrt(10**popwind_WR/popmdot_WR_cgs)
+    massload_LBV = np.sqrt(10**popwind/popmdot_LBV_cgs)
+    massload_LM = np.sqrt(10**popwind/popmdot_LM_cgs)
+    massload_OB = np.sqrt(10**popwind/popmdot_OB_cgs)
+    massload_RM = np.sqrt(10**popwind/popmdot_RM_cgs)
+
     massload_kms = np.array(massload*1e-5)
+    massload_kms_WR = np.array(massload_WR*1e-5)
+    massload_kms_LBV = np.array(massload_LBV*1e-5)
+    massload_kms_LM = np.array(massload_LM*1e-5)
+    massload_kms_OB = np.array(massload_OB*1e-5)
+    massload_kms_RM = np.array(massload_RM*1e-5)
+
 #     massload = np.sqrt(10**np.array(population_windpowers)/np.array(population_mdots_new*6.307e25)) # log wind pow, mdot to cgs 
-    ax.plot(times_steps_log, massload_kms, label='pySB')
+    ax.plot(times_steps_log, massload_kms, label='All')
+    ax.plot(times_steps_log, massload_kms_WR, label='Only WR')
+    # ax.plot(times_steps_log, massload_kms_LBV, label='LBV Mdot')
+    # ax.plot(times_steps_log, massload_kms_LM, label='LM Mdot')
+    # ax.plot(times_steps_log, massload_kms_OB, label='OB Mdot')
+    # ax.plot(times_steps_log, massload_kms_LM, label='RM Mdot')
+
+
+
     #ax.plot(times_steps_log, population_windmoms_vink, label='vink')
     #ax.plot(times_steps_log, population_windmoms_leuven, label='leuven')
     #ax.plot(times_steps_log, population_windmoms_xshootu, label='xshootu')
-    plt.xlim(6.,7.25)
-#     plt.ylim(0,10000)
+    plt.xlim(6.3,6.8)
+    plt.ylim(0,3000)
     plt.title('Mass-Loaded Cluster Wind Velocity over Time', fontsize=12)
     plt.xlabel('Time', fontsize=12)
     plt.ylabel('Wind Velocity [km/sec]', fontsize=12)
     plt.tight_layout()
     plt.legend()
     plt.savefig(SBmodel_name + '/massload.pdf',dpi=400,bbox_inches='tight')
+    plt.show()
+
+    fig=plt.figure()  # Mass-loading plot, needs to be tidied up
+    plt.style.use('default')
+    ax=fig.add_subplot(111)
+#     massload = 2500 * ((np.array(population_windpowers)/1e39)**0.5) * (np.array(population_mdots_new)/5e-4)**(-0.5)
+    
+
+#     massload = np.sqrt(10**np.array(population_windpowers)/np.array(population_mdots_new*6.307e25)) # log wind pow, mdot to cgs 
+    
+    ax.plot(times_steps_log, popmdot_WR, label='WR Mdot')
+    ax.plot(times_steps_log, popmdot_LBV, label='LBV Mdot')
+    ax.plot(times_steps_log, popmdot_LM, label='LM Mdot')
+    ax.plot(times_steps_log, popmdot_OB, label='OB Mdot')
+    ax.plot(times_steps_log, popmdot_RM, label='RM Mdot')
+    ax.plot(times_steps_log, popmdot, label='All Mdot')
+
+
+    #ax.plot(times_steps_log, population_windmoms_vink, label='vink')
+    #ax.plot(times_steps_log, population_windmoms_leuven, label='leuven')
+    #ax.plot(times_steps_log, population_windmoms_xshootu, label='xshootu')
+    plt.xlim(6.,7.25)
+    plt.ylim(1e-6,1e-1)
+    # plt.set_yscale("log")
+    plt.yscale("log")
+#     plt.ylim(0,10000)
+    plt.title('Mass-Loss over Time', fontsize=12)
+    plt.xlabel('Time', fontsize=12)
+    plt.ylabel('Mdot [Msun/yr]', fontsize=12)
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig(SBmodel_name + '/mdot.pdf',dpi=400,bbox_inches='tight')
     plt.show()
     
     
@@ -2155,6 +2452,8 @@ if plot_wind == True:
                 np.savetxt(SBmodel_name + '/windmom.txt', population_windmoms)  
                 np.savetxt(SBmodel_name + '/massloss.txt', population_mdots_new)
                 np.savetxt(SBmodel_name + '/massload.txt', massload_kms)
+                np.savetxt(SBmodel_name + '/massloss_WR.txt', population_mdots_new_WR)
+                np.savetxt(SBmodel_name + '/massload_WR.txt', massload_kms_WR)
 
 
             
