@@ -8,7 +8,7 @@ $ git clone https://github.com/CalumHawcroft/Starburst.git
 ```
 
 * Or run in browser with Colab
-```
+
 https://colab.research.google.com/drive/1MN4P8Q47jshh3bw2sEODb3eJDNxgAbLc?usp=sharing
-```
+
 ## Running the code
