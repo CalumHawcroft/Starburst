@@ -28,5 +28,16 @@ In 'FAST' mode the interpolation is constant throughout the mass range, this mig
 In 'HIGH_RES' mode the interpolation is significantly increased across all masses, and even moreso in the 7 to 35 solar mass range, this ensures smooth outputs at the cost of runtime.
 Keen users can also go into the 'interpolate_param' function and set their own custom interpolation resolution to highlight the stellar mass range they are most interested in.
 
+* **Metallicity** (Z) [MWC, MW, LMC, SMC, IZw18, Z0] - this selects the metallicity of the stellar evolutionary tracks and spectral library. The current options are set to reflect the applicable stellar environments the GENEC evolutionary tracks are tailored to; Milky Way Centre (MWC - Z=0.02), Milky Way (MW - Z=0.014), LMC (Z=0.006), SMC (Z=0.002), IZw18 (Z=0.0004), Z0 (Z=0). More options for other evolutionary tracks are planned for future releases (coming soon are models for Extremely metal poor stars (XMP, Z=1e-5)
 
+* **Spectral library** (SPEC) [FW, WM] - choice of OB star stellar library used to generate SEDs (equivalent to .spectrum SB99 output) between WMBasic (WM) and Fastwind (FW) synthetic spectral libraries. WMBasic libraries are described in Leitherer+2010, the Fastwind library is designed to match the latest GENEC metallicity and mass range for pySB99.
 
+* **Rotation option** (rot) [True, False] - choice of rotating (v=0.4 break-up) or non-rotating stellar evolutionary tracks, True includes rotation while False is non-rotating.
+
+* **Output plot options** (*_ion_flux, _wind, _uv_slope, _ew, _colours) - choice of which output arrays and files to plot with time. Corresponding to ionising fluxes of HI, HeI and HeII, the wind momentum/power, beta uv-slope, equivalent widths of Halpha, Hbeta etc and colours (V, U, I, B, M_V). These are the current outputs which are fully tested and verified for the latest release. More to come soon including the high resolution spectra, supernova rates, spectral types and isochrones.
+
+* **Output save option** (save_output) [True, False] - choice of whether to save the array files used to generate the outputs described above (note that the plot option must be set to True as well for the save option to work). The majority of the outputs are saved as text files with the SEDs saved as numpy arrays instead.
+
+* **Model designation** (SBmodel_name) [self-defined string) - if save output is set to True you also have to provide a name for the output model, all outputs will be saved to a folder with this designation. 
+
+* **Timesteps** (times_steps) [array] - output timesteps for stellar population, defined using numpy arange, so the format must be the initial time, the final time and the width of the timestep in years.
