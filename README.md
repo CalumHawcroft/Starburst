@@ -4,7 +4,7 @@ Here is the GitHub repository for pyStarburst99. This is essentially a translati
 ## Installation
 * Clone the repository to install.
 ```
-	$ git clone https://github.com/CalumHawcroft/Starburst.git
+$ git clone https://github.com/CalumHawcroft/Starburst.git
 ```
 
 Or run in browser with Colab
