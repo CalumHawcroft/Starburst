@@ -1,5 +1,5 @@
 # Starburst
-Here is the GitHub repository for pyStarburst99. This is essentially a translation/slight reworking of the Starburst99 fortran code. 
+Here is the GitHub repository for pyStarburst99. This is essentially a translation/slight reworking of the Starburst99 fortran code. Please let us know if you have any thoughts or questions on the code at pystarburst99@gmail.com
 
 ## Installation
 * Clone the repository to install
