@@ -39,7 +39,7 @@ plot_colours = True
 plot_spec_with_time = True
 
 if plot_spec_with_time == True:
-    spec_time = 3.7 #set age of SED to plot (in Myr)
+    spec_time = 2 #set age of SED to plot (in Myr)
 
 save_output = True
 
