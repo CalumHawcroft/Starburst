@@ -27,7 +27,7 @@ IMF_mass_limits = 0.1, 0.5, 120.
 #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
 run_speed_mode = 'DEFAULT' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
 
-Z = 'LMC' #Z options are MWC, MW, LMC, SMC, IZw18 and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
+Z = 'SMC' #Z options are MWC, MW, LMC, SMC, IZw18 and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
 SPEC = 'FW' #options are FW and WM which refer to the Fastwind and WMbasic OB spectral libraries
 rot = False #options are True to use tracks with 0.4v_critical rotation or False for non-rotating tracks
 
@@ -41,7 +41,12 @@ plot_spec_with_time = True
 if plot_spec_with_time == True:
     spec_time = 3.7 #set age of SED to plot (in Myr)
 
-save_output = False
+save_output = True
+
+times_spectra_start = 1e6 #yrs
+times_spectra_end = 50e6 #yrs
+time_step_spectra = 1e6 #yrs
+
 
 '''coming soon!'''
 plot_isochrones = False
@@ -51,9 +56,9 @@ plot_SN_rate = False
 plot_new_hires = False
 
 if save_output == True:
-    SBmodel_name = 'test_aug4' #set the output folder name here!
+    SBmodel_name = 'test_aug14' #set the output folder name here!
     os.mkdir(SBmodel_name)
-
+    
 '''Load input files based on chosen metallicity and mass limits'''
 if Z =='MWC':
     file_path = 'pySB99_files/Z020_pySB99_files/'
@@ -257,9 +262,12 @@ if POWR == True:
 if POWR == False:
     hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
     empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+    
+time_steps_start = 0.00e6 #yrs
+time_steps_end = times_spectra_end
 
-times_spectra = np.arange(0.01e6, 50e6, 1e6)
-times_steps = np.arange(0.00e6, 50e6, 0.1e6)
+times_spectra = np.arange(times_spectra_start, times_spectra_end, time_step_spectra)
+times_steps = np.arange(time_step_spectra, time_steps_end, 0.1e6)
 times_steps_SB99 = np.arange(0.01e6, 50e6, 0.1e6)
 
 def calc_Nostars(IMF_masses, IMF_exponents, IMF_mass_limits):
@@ -1939,6 +1947,9 @@ if save_output == True:
             inputs_file.write('Equivalent width output choice = True' + '\n')
         if plot_ew == False:
             inputs_file.write('Equivalent with output output choice = False' + '\n')
+        
+    np.savetxt(SBmodel_name + '/timesteps.txt', times_steps)
+
 
 else:
     print('M_total = ' + str(M_total) + 'Msol')   
@@ -1984,24 +1995,31 @@ if plot_spec_with_time == True:
     plt.show()
     
     if save_output == True:
+        ind_spectra_output = np.where(np.isin(times_steps, times_spectra))[0]
+        population_flux_iterations_send_save = np.array(population_flux_iterations_send)[ind_spectra_output]
+        population_flux_total_iterations_send_save = np.array(population_flux_total_iterations_send)[ind_spectra_output]
         if IMF_mass_limits[-1] > 120.:
             if rot == True:
-                np.save(SBmodel_name + '/rotVMSpySB_SED_stellar.npy', population_flux_iterations_send)
-                np.save(SBmodel_name + '/rotVMSpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send)
+                np.save(SBmodel_name + '/rotVMSpySB_SED_stellar.npy', population_flux_iterations_send_save)
+                np.save(SBmodel_name + '/rotVMSpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
                 np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
+                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
             else:
-                np.save(SBmodel_name + '/VMSpySB_SED_stellar.npy', population_flux_iterations_send)
-                np.save(SBmodel_name + '/VMSpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send)
+                np.save(SBmodel_name + '/VMSpySB_SED_stellar.npy', population_flux_iterations_send_save)
+                np.save(SBmodel_name + '/VMSpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
                 np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
+                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
         else:
             if rot == True:
-                np.save(SBmodel_name + '/rotpySB_SED_stellar.npy', population_flux_iterations_send)
-                np.save(SBmodel_name + '/rotpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send)
+                np.save(SBmodel_name + '/rotpySB_SED_stellar.npy', population_flux_iterations_send_save)
+                np.save(SBmodel_name + '/rotpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
                 np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
+                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
             else:
-                np.save(SBmodel_name + '/pySB_SED_stellar.npy', population_flux_iterations_send)
-                np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send)
+                np.save(SBmodel_name + '/pySB_SED_stellar.npy', population_flux_iterations_send_save)
+                np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
                 np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
+                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
 
 if plot_ion_flux == True:
 
