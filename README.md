@@ -34,7 +34,7 @@ Keen users can also go into the 'interpolate_param' function and set their own c
 
 * **Rotation option** (rot) [True, False] - choice of rotating (v=0.4 break-up) or non-rotating stellar evolutionary tracks, True includes rotation while False is non-rotating.
 
-* **Output plot options** (*_ion_flux, _wind, _uv_slope, _ew, _colours) - choice of which output arrays and files to plot with time. Corresponding to ionising fluxes of HI, HeI and HeII, the wind momentum/power, beta uv-slope, equivalent widths of Halpha, Hbeta etc and colours (V, U, I, B, M_V). These are the current outputs which are fully tested and verified for the latest release. More to come soon including the high resolution spectra, supernova rates, spectral types and isochrones.
+* **Output plot options** (*_ion_flux, _wind, _uv_slope, _ew, _colours, _sed) - choice of which output arrays and files to plot with time. Corresponding to ionising fluxes of HI, HeI and HeII, the wind momentum/power, beta uv-slope, equivalent widths of Halpha, Hbeta etc, colours (V, U, I, B, M_V) and an example SED at a specified age. These are the current outputs which are fully tested and verified for the latest release. More to come soon including the high resolution spectra, supernova rates, spectral types and isochrones.
 
 * **Output save option** (save_output) [True, False] - choice of whether to save the array files used to generate the outputs described above (note that the plot option must be set to True as well for the save option to work). The majority of the outputs are saved as text files with the SEDs saved as numpy arrays instead.
 
