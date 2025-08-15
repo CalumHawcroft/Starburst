@@ -40,4 +40,4 @@ Keen users can also go into the 'interpolate_param' function and set their own c
 
 * **Model designation** (SBmodel_name) [self-defined string) - if save output is set to True you also have to provide a name for the output model, all outputs will be saved to a folder with this designation. 
 
-* **Timesteps** (times_spectra_start, times_spectra_end, time_step_spectra) [array] - output timesteps for saving stellar population spectral outputs, you can set the initial time, the final time and the width of the timestep in years.
+* **Timesteps** (times_spectra_start, times_spectra_end, time_step_spectra) [yrs] - output timesteps for saving stellar population spectral outputs, you can set the initial time, the final time and the width of the timestep in years.
