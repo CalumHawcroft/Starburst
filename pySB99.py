@@ -47,7 +47,6 @@ times_spectra_start = 1e6 #yrs
 times_spectra_end = 50e6 #yrs
 time_step_spectra = 1e6 #yrs
 
-
 '''coming soon!'''
 plot_isochrones = False
 plot_spectral_types = False
