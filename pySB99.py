@@ -27,7 +27,7 @@ IMF_mass_limits = 0.1, 0.5, 120.
 #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
 run_speed_mode = 'DEFAULT' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
 
-Z = 'SMC' #Z options are MWC, MW, LMC, SMC, IZw18 and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
+Z = 'XMP' #Z options are MWC, MW, LMC, SMC, IZw18, XMP and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004, 0.00001 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
 SPEC = 'FW' #options are FW and WM which refer to the Fastwind and WMbasic OB spectral libraries
 rot = False #options are True to use tracks with 0.4v_critical rotation or False for non-rotating tracks
 
@@ -41,7 +41,7 @@ plot_spec_with_time = True
 if plot_spec_with_time == True:
     spec_time = 2 #set age of SED to plot (in Myr)
 
-save_output = True
+save_output = False
 
 times_spectra_start = 1e6 #yrs
 times_spectra_end = 50e6 #yrs
@@ -208,6 +208,36 @@ if Z == 'IZw18':
     hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
     hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
     hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+    WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z001.npy')
+    WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z001.npy', allow_pickle=True)
+    WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z001.npy')
+    WC_spectra = np.load(file_path + 'WC_spectra_cmfgen_Z001.npy', allow_pickle=True)
+    WN_spec_params_powr = np.load(file_path + 'WN_spec_params_powr_Z001.npy')
+    WN_spectra_powr = np.load(file_path + 'WN_spectra_powr_Z001.npy', allow_pickle=True)
+    WC_spec_params_powr = np.load(file_path + 'WC_spec_params_powr_Z001.npy')
+    WC_spectra_powr = np.load(file_path + 'WC_spectra_powr_Z001.npy', allow_pickle=True) 
+    
+if Z == 'XMP':
+    file_path = 'pySB99_files/Z00001_pySB99_files/'
+    mass_grid = [500., 300., 200., 150., 120., 85., 60., 40., 30., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7]
+    if IMF_mass_limits[-1] > 500.:
+        print('Tracks do not exist at 0.00001 above 500Msol')
+        exit()
+    if rot == True:
+        evo_tracks = np.load(file_path + 'Z00001v40_tracks.npy')
+        minimum_wr_mass=84.
+    elif rot == False:
+        evo_tracks = np.load(file_path + 'Z00001v00_tracks.npy')
+        minimum_wr_mass=84.
+    if SPEC == 'WM':
+        spectra_grid_file = 'galaxy/lejeune/WMbasic_OB_Z001_tst.dat'
+    if SPEC == 'FW':
+        spectra_grid_file = file_path + 'FW_SB_grid_Z00001.txt'
+    lowmass_params = np.load(file_path + 'spec_params_lowmassm13.npy')
+    lowmass_flux = np.load(file_path + 'lcb97_m13_reform.npy')# * 12
+    hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+    hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+    hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z001.npy')
     WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z001.npy', allow_pickle=True)
     WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z001.npy')
@@ -1504,6 +1534,8 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
         Z_value = 0.1428
     if Z == 'IZw18':
         Z_value = 0.0285
+    if Z == 'XMP':
+        Z_value = 0.00071428
     if Z == 'Z0':
         Z_value = 1e-5
 
