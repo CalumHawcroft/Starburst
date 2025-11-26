@@ -189,9 +189,9 @@ if Z == 'SMC':
     if spectra_library == 'WM':
         hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
         empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
-        hires_flux = np.load(file_path + 'ifa_line_m07_reform.npy')
-        hires_cont_flux = np.load(file_path + 'ifa_cont_m07_reform.npy')
-        hires_params = np.load(file_path + 'spec_params_ifa_line_m07.npy')
+        hires_flux = np.load(file_path + 'ifa_line_m07_reform_new.npy')
+        hires_cont_flux = np.load(file_path + 'ifa_cont_m07_reform_new.npy')
+        hires_params = np.load(file_path + 'spec_params_ifa_line_m07_new.npy')
     lowmass_params = np.load(file_path + 'spec_params_lowmassm07.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m07_reform.npy')# * 12
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z004.npy')
@@ -2160,6 +2160,8 @@ if plot_hires_spectra == True:
     
     hires_plot_choice_flux = 10**(np.log10(population_hires_flux_iterations[int(spec_time*10)]+1.0e-35)+20.)
     
+    hires_plot_choice_flux_norm = population_hires_flux_norm_iterations[int(spec_time*10)]
+    
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
@@ -2170,30 +2172,50 @@ if plot_hires_spectra == True:
     plt.tight_layout()
     plt.legend()
     plt.show()
+    
+    fig=plt.figure()
+    plt.style.use('default')
+    ax=fig.add_subplot(111)
+    ax.plot(hires_wave_grid, hires_plot_choice_flux_norm, label='pySB t='+str(spec_time)+'Myr', color='tab:red')
+    ax.set_title('Hires ifa spectra', fontsize=12)
+    plt.xlabel('Wave', fontsize=12)
+    plt.ylabel('Normalised Flux', fontsize=12)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
         
     if save_output == True:
         ind_hires_spectra_output = np.where(np.isin(times_steps, times_spectra))[0]
         hires_flux_iterations_send_save = np.array(population_hires_flux_iterations)[ind_hires_spectra_output]
+        hires_flux_norm_iterations_send_save = np.array(population_hires_flux_norm_iterations)[ind_hires_spectra_output]
         if IMF_mass_limits[-1] > 120.:
             if rot == True:
                 np.save(SBmodel_name + '/rotVMSpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+                np.save(SBmodel_name + '/rotVMSpySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
                 np.savetxt(SBmodel_name + '/rotVMSpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/rotVMSpySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
                 np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
                 np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
             else:
                 np.save(SBmodel_name + '/VMSpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+                np.save(SBmodel_name + '/VMSpySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
                 np.savetxt(SBmodel_name + '/VMSpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/VMSpySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
                 np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
                 np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
         else:
             if rot == True:
                 np.save(SBmodel_name + '/rotpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+                np.save(SBmodel_name + '/rotpySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
                 np.savetxt(SBmodel_name + '/rotpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/rotpySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
                 np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
                 np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
             else:
                 np.save(SBmodel_name + '/pySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+                np.save(SBmodel_name + '/pySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
                 np.savetxt(SBmodel_name + '/pySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/pySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
                 np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
                 np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
 
