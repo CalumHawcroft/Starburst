@@ -30,7 +30,10 @@ Keen users can also go into the 'interpolate_param' function and set their own c
 
 * **Metallicity** (Z) [MWC, MW, LMC, SMC, IZw18, Z0] - this selects the metallicity of the stellar evolutionary tracks and spectral library. The current options are set to reflect the applicable stellar environments the GENEC evolutionary tracks are tailored to; Milky Way Centre (MWC - Z=0.02), Milky Way (MW - Z=0.014), LMC (Z=0.006), SMC (Z=0.002), IZw18 (Z=0.0004), Z0 (Z=0). More options for other evolutionary tracks are planned for future releases (coming soon are models for Extremely metal poor stars (XMP, Z=1e-5)
 
-* **Spectral library** (SPEC) [FW, WM] - choice of OB star stellar library used to generate SEDs (equivalent to .spectrum SB99 output) between WMBasic (WM) and Fastwind (FW) synthetic spectral libraries. WMBasic libraries are described in Leitherer+2010, the Fastwind library is designed to match the latest GENEC metallicity and mass range for pySB99.
+* **Spectral libraries** (SED_library [FW, WM] and spectral_library [WM]) - pySB99 contains two separate OB stellar spectral libraries for different output purposes. First is the low-resolution but wide wavelength coverage SED library for computing quantities such as ionising fluxes. Second is the high-resolution but narrower wavelength coverage spectral line library, used to create composite diagnostic line profiles. 
+For the lower resolution OB star stellar library used to generate SEDs (equivalent to .spectrum SB99 output), there is a choice between WMBasic (WM) and Fastwind (FW) libraries (more options e.g. PoWR to come soon). 
+For the higher resolution OB star spectral library used for line synthesis, only the WMBasic library is currently available, with Fastwind and PoWR options coming soon. 
+The WMBasic libraries are described in Leitherer+2010, the Fastwind library is designed to match the latest GENEC metallicity and mass range for pySB99 (see Hawcroft+2025).
 
 * **Rotation option** (rot) [True, False] - choice of rotating (v=0.4 break-up) or non-rotating stellar evolutionary tracks, True includes rotation while False is non-rotating.
 
