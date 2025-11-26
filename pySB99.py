@@ -27,8 +27,9 @@ IMF_mass_limits = 0.1, 0.5, 120.
 #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
 run_speed_mode = 'DEFAULT' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
 
-Z = 'XMP' #Z options are MWC, MW, LMC, SMC, IZw18, XMP and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004, 0.00001 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
-SPEC = 'FW' #options are FW and WM which refer to the Fastwind and WMbasic OB spectral libraries
+Z = 'SMC' #Z options are MWC, MW, LMC, SMC, IZw18, XMP and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004, 0.00001 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
+SED_library = 'FW' #options are FW and WM which refer to the Fastwind and WMbasic OB low resolution spectral libraries
+spectra_library = 'WM' #options are WM which refer tos the WMbasic OB high resolution spectral library. PoWR and FW to come soon
 rot = False #options are True to use tracks with 0.4v_critical rotation or False for non-rotating tracks
 
 plot_ion_flux = True
@@ -36,26 +37,28 @@ plot_wind = True
 plot_uv_slope = True
 plot_ew = True
 plot_colours = True
-plot_spec_with_time = True
+plot_SED_with_time = True
+plot_hires_spectra = True
 
-if plot_spec_with_time == True:
+if plot_SED_with_time == True:
     spec_time = 2 #set age of SED to plot (in Myr)
+    
+if plot_hires_spectra == True:
+    hires_spec_time = 2 #set age of spectrum to plot (in Myr)
 
-save_output = False
+save_output = True
 
-times_spectra_start = 1e6 #yrs
+times_spectra_start = 0.1e6 #yrs
 times_spectra_end = 50e6 #yrs
 time_step_spectra = 1e6 #yrs
 
 '''coming soon!'''
 plot_isochrones = False
 plot_spectral_types = False
-plot_hires_spectra = False
 plot_SN_rate = False
-plot_new_hires = False
 
 if save_output == True:
-    SBmodel_name = 'test_aug14' #set the output folder name here!
+    SBmodel_name = 'pySB99_test_model' #set the output folder name here!
     os.mkdir(SBmodel_name)
     
 '''Load input files based on chosen metallicity and mass limits'''
@@ -71,15 +74,18 @@ if Z =='MWC':
     elif rot == False:
         evo_tracks = np.load(file_path + 'Z020v00_VMS_tracks.npy')
         minimum_wr_mass=20.
-    if SPEC == 'WM':
-        spectra_grid_file = file_path + 'galaxy/lejeune/WMbasic_OB_Z020_test.dat'
-    if SPEC == 'FW':
+    if SED_library == 'WM':
+        spectra_grid_file = file_path + 'WMbasic_OB_Z020_test.dat'
+    if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z020_VMS.txt'
+    if spectra_library == 'WM':
+        hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
+        hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
+        hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy')
     lowmass_params = np.load(file_path + 'spec_params_lowmassp00.npy')
     lowmass_flux = np.load(file_path + 'lcb97_p00_reform.npy')# * 12
-    hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy')
-    hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
-    hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z020.npy')
     WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z020.npy', allow_pickle=True)
     WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z020.npy')
@@ -99,23 +105,26 @@ if Z == 'MW':
         evo_tracks = np.load(file_path + 'Z014v40_VMS_tracks.npy')
         minimum_wr_mass=20.
     elif rot == False:
-        mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 11.5, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
+        mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 11.5, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]        
         if IMF_mass_limits[-1] > 500.:
             print('Tracks do not exist at Z=0.014 above 500Msol')
             exit()
         evo_tracks = np.load(file_path + 'Z014v00_VMS_tracks.npy')
         minimum_wr_mass=25.
-    if SPEC == 'WM':
+    if SED_library == 'WM':
         spectra_grid_file = file_path + 'WMbasic_OB_Z020_test.dat'
-    if SPEC == 'FW':
+    if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z014.txt'
         if IMF_mass_limits[-1] > 120.0:
             spectra_grid_file = file_path + 'FW_SB_grid_Z014_VMS.txt'
+    if spectra_library == 'WM':
+        hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
+        hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
+        hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy')
     lowmass_params = np.load(file_path + 'spec_params_lowmassp00.npy')
     lowmass_flux = np.load(file_path + 'lcb97_p00_reform.npy')# * 12
-    hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy')
-    hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
-    hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z020.npy')
     WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z020.npy', allow_pickle=True)
     WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z020.npy')
@@ -137,17 +146,21 @@ if Z == 'LMC':
     elif rot == False:
         evo_tracks = np.load(file_path + 'Z006v00_VMS_tracks.npy')
         minimum_wr_mass=25.
-    if SPEC == 'WM':
-        spectra_grid_file = file_path + 'galaxy/lejeune/WMbasic_OB_Z008_tst.dat'
-    if SPEC == 'FW':
+    if SED_library == 'WM':
+        spectra_grid_file = file_path + 'WMbasic_OB_Z008_tst.dat'
+    if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z006.txt'
         if IMF_mass_limits[-1] > 120.0:
-            spectra_grid_file = file_path + 'FW_SB_grid_Z006_VMS.txt'
+            spectra_grid_file = file_path + 'FW_SB_grid_Z006_VMS.txt' #VMS with a few more converge models (fixed Q)
+            #spectra_grid_file = 'FW_SB_gridSB99_LMC_all.txt' (same but a few less converged models and tailored wind parameters)
+    if spectra_library == 'WM':
+        hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        hires_flux = np.load(file_path + 'ifa_line_m04_reform.npy')
+        hires_cont_flux = np.load(file_path + 'ifa_cont_m04_reform.npy')
+        hires_params = np.load(file_path + 'spec_params_ifa_line_m04.npy')
     lowmass_params = np.load(file_path + 'spec_params_lowmassm04.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m04_reform.npy')# * 12
-    hires_params = np.load(file_path + 'spec_params_ifa_line_m04.npy')
-    hires_flux = np.load(file_path + 'ifa_line_m04_reform.npy')
-    hires_cont_flux = np.load(file_path + 'ifa_cont_m04_reform.npy')
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z008.npy')
     WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z008.npy', allow_pickle=True)
     WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z008.npy')
@@ -169,15 +182,18 @@ if Z == 'SMC':
     elif rot == False:
         evo_tracks = np.load(file_path + 'Z002v00_tracks.npy')
         minimum_wr_mass=84.
-    if SPEC == 'WM':
-        spectra_grid_file = file_path + 'galaxy/lejeune/WMbasic_OB_Z004_tst.dat'
-    if SPEC == 'FW':
+    if SED_library == 'WM':
+        spectra_grid_file = file_path + 'WMbasic_OB_Z004_tst.dat'
+    if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z002.txt'
+    if spectra_library == 'WM':
+        hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        hires_flux = np.load(file_path + 'ifa_line_m07_reform.npy')
+        hires_cont_flux = np.load(file_path + 'ifa_cont_m07_reform.npy')
+        hires_params = np.load(file_path + 'spec_params_ifa_line_m07.npy')
     lowmass_params = np.load(file_path + 'spec_params_lowmassm07.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m07_reform.npy')# * 12
-    hires_params = np.load(file_path + 'spec_params_ifa_line_m07.npy')
-    hires_flux = np.load(file_path + 'ifa_line_m07_reform.npy')
-    hires_cont_flux = np.load(file_path + 'ifa_cont_m07_reform.npy')
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z004.npy')
     WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z004.npy', allow_pickle=True)
     WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z004.npy')
@@ -187,7 +203,7 @@ if Z == 'SMC':
     WC_spec_params_powr = np.load(file_path + 'WC_spec_params_powr_Z004.npy')
     WC_spectra_powr = np.load(file_path + 'WC_spectra_powr_Z004.npy', allow_pickle=True) 
 
-if Z == 'IZw18':
+if Z == 'IZw18': 
     file_path = 'pySB99_files/Z0004_pySB99_files/'
     mass_grid = [120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7]
     if IMF_mass_limits[-1] > 120.:
@@ -199,15 +215,18 @@ if Z == 'IZw18':
     elif rot == False:
         evo_tracks = np.load(file_path + 'Z0004v00_tracks.npy')
         minimum_wr_mass=84.
-    if SPEC == 'WM':
-        spectra_grid_file = 'galaxy/lejeune/WMbasic_OB_Z001_tst.dat'
-    if SPEC == 'FW':
+    if SED_library == 'WM':
+        spectra_grid_file = file_path + 'WMbasic_OB_Z001_tst.dat'
+    if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z0004.txt'
+    if spectra_library == 'WM':
+        hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
     lowmass_params = np.load(file_path + 'spec_params_lowmassm13.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m13_reform.npy')# * 12
-    hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
-    hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
-    hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z001.npy')
     WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z001.npy', allow_pickle=True)
     WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z001.npy')
@@ -229,15 +248,18 @@ if Z == 'XMP':
     elif rot == False:
         evo_tracks = np.load(file_path + 'Z00001v00_tracks.npy')
         minimum_wr_mass=84.
-    if SPEC == 'WM':
-        spectra_grid_file = 'galaxy/lejeune/WMbasic_OB_Z001_tst.dat'
-    if SPEC == 'FW':
+    if SED_library == 'WM':
+        spectra_grid_file = file_path + 'WMbasic_OB_Z001_tst.dat'
+    if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z00001.txt'
+    if spectra_library == 'WM':
+        hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
     lowmass_params = np.load(file_path + 'spec_params_lowmassm13.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m13_reform.npy')# * 12
-    hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
-    hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
-    hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z001.npy')
     WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z001.npy', allow_pickle=True)
     WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z001.npy')
@@ -263,17 +285,20 @@ if Z == 'Z0':
             exit()
         evo_tracks = np.load(file_path + 'Z00v00_tracks.npy')
         minimum_wr_mass=84.
-    if SPEC == 'WM':
-        spectra_grid_file = 'galaxy/lejeune/WMbasic_OB_Z001_tst.dat'
-    if SPEC == 'FW':
+    if SED_library == 'WM':
+        spectra_grid_file = file_path + 'WMbasic_OB_Z001_tst.dat'
+    if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z0.txt'
         if IMF_mass_limits[-1] > 120.0:
             spectra_grid_file = file_path + 'FW_SB_grid_Z0_VMS.txt'
+    if spectra_library == 'WM':
+        hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
     lowmass_params = np.load(file_path + 'spec_params_lowmassm13.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m13_reform.npy')# * 12
-    hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
-    hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
-    hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z001.npy')
     WN_spectra = np.load(file_path + 'WN_spectra_cmfgen_Z001.npy', allow_pickle=True)
     WC_spec_params = np.load(file_path + 'WC_spec_params_cmfgen_Z001.npy')
@@ -291,13 +316,9 @@ if POWR == True:
 if POWR == False:
     hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
     empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
-    
-time_steps_start = 0.00e6 #yrs
-time_steps_end = times_spectra_end
 
 times_spectra = np.arange(times_spectra_start, times_spectra_end, time_step_spectra)
-times_steps = np.arange(time_step_spectra, time_steps_end, 0.1e6)
-times_steps_SB99 = np.arange(0.01e6, 50e6, 0.1e6)
+times_steps = np.arange(0.00e6, 50e6, 0.1e6)
 
 def calc_Nostars(IMF_masses, IMF_exponents, IMF_mass_limits):
     '''
@@ -610,7 +631,7 @@ def interpolate_param(tracks_parameter, track_masses, run_speed_mode):
                 inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 )
                 
         if run_speed_mode == 'FAST':
-            inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 )
+            inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 ) * 1
             
         if run_speed_mode == 'HIGH_RES':
             if round(initial_mass_upper) > 7 and round(initial_mass_upper) < 35:
@@ -1047,7 +1068,7 @@ def assign_spectra_to_grid_WR(timestep_temps_final,spec_params_reform, spec_para
 
     return(assigned_integrated_spectra,assigned_spec_teff,assigned_spectra, population_choice, assigned_spec_logl, assigned_spec_logg)
 
-def assign_spectra_to_grid_hires(timestep_temps_final,hires_params, hires_teffs, hires_loggs, timestep_lums_final, timestep_H_abundances_final, timestep_masses_final, initial_masses, specsyn_cotests, specsyn_loggs):
+def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs, timestep_lums_final, timestep_H_abundances_final, timestep_masses_final, initial_masses, specsyn_cotests, specsyn_loggs):
     assigned_integrated_spectra=[]
     assigned_spec_teff=[]
     assigned_spec_logg=[]
@@ -1175,21 +1196,29 @@ def assign_spectra_to_grid_hires(timestep_temps_final,hires_params, hires_teffs,
                 spec_cont = planck(hires_wave_grid, near_spec_temp)
                 cont_flux_scaled = spec_cont[:,1] * assigned_flux_resampled[4050] / spec_cont[:,1][4050]
                 assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
-
-        elif initial_masses[j] > 5. and timestep_teffs_final[j] < 17000:
-            hires_choice.append('kurucz2')
-            for i in range(len(lowmass_params)):
-                #distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2 + (lowmass_loggs[i] - timestep_loggs_final[j])**2)
-                distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2)
-            nearest_spec_ind = np.argmin(distance_to_spec)
-            near_spec_temp = lowmass_teffs[nearest_spec_ind]
-            assigned_spec_teff.append(near_spec_temp)
-            assigned_spectrum = lowmass_spec[nearest_spec_ind]
-            assigned_flux_resampled = np.interp(hires_wave_grid, assigned_spectrum[:,0], assigned_spectrum[:,1])
-            assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
-            assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
-            assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
-
+                
+        #elif initial_masses[j] < 5. or timestep_teffs_final[j] < 2000:
+        elif timestep_teffs_final[j] < 2000:
+            # hires_choice.append('lowmass')
+            # for i in range(len(lowmass_params)):
+            #     #distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2 + (lowmass_loggs[i] - timestep_loggs_final[j])**2)
+            #     distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2)
+            # nearest_spec_ind = np.argmin(distance_to_spec)
+            # near_spec_temp = lowmass_teffs[nearest_spec_ind]
+            # assigned_spec_teff.append(near_spec_temp)
+            # assigned_spec_logg.append(1.0)
+            # assigned_spectrum = lowmass_spec[nearest_spec_ind]
+            # assigned_flux_resampled = np.interp(hires_wave_grid, assigned_spectrum[:,0], assigned_spectrum[:,1])
+            # assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            # assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
+            # assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            
+            hires_choice.append('nope')
+            assigned_spec_teff.append(0.0)
+            assigned_spectra.append(np.column_stack((hires_wave_grid, empty_hires_flux)))
+            assigned_integrated_spectra.append(1e-30)
+            assigned_cont.append(np.column_stack((hires_wave_grid, empty_hires_flux)))
+                
         elif initial_masses[j] > 10. and timestep_teffs_final[j] < 22000:
             hires_choice.append('kurucz')
             for i in range(len(lowmass_params)):
@@ -1205,15 +1234,14 @@ def assign_spectra_to_grid_hires(timestep_temps_final,hires_params, hires_teffs,
             assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
             assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
 
-        elif initial_masses[j] < 5.:
-            hires_choice.append('lowmass')
+        elif initial_masses[j] < 5. or initial_masses[j] > 5. and timestep_teffs_final[j] < 17000:
+            hires_choice.append('kurucz2')
             for i in range(len(lowmass_params)):
                 #distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2 + (lowmass_loggs[i] - timestep_loggs_final[j])**2)
                 distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2)
             nearest_spec_ind = np.argmin(distance_to_spec)
             near_spec_temp = lowmass_teffs[nearest_spec_ind]
             assigned_spec_teff.append(near_spec_temp)
-            assigned_spec_logg.append(1.0)
             assigned_spectrum = lowmass_spec[nearest_spec_ind]
             assigned_flux_resampled = np.interp(hires_wave_grid, assigned_spectrum[:,0], assigned_spectrum[:,1])
             assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
@@ -1221,9 +1249,30 @@ def assign_spectra_to_grid_hires(timestep_temps_final,hires_params, hires_teffs,
             assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
 
         else:
-            if POWR == False:
+            if spectra_library == 'FW':# and timestep_teffs_final[j] > 17600:
+                hires_choice.append('OB - FW')
+                for i in range(len(hires_teffs)):
+                    #distance_to_spec.append(abs(hires_teffs[i] - 10**timestep_temps_final[j]) + abs(hires_loggs[i] - specsyn_loggs[j]))
+                    distance_to_spec.append((timestep_temps_final[j] - np.log10(hires_teffs[i]))**2 + 5*(hires_loggs[i] - specsyn_loggs[j])**2)
+                nearest_spec_ind = np.argmin(distance_to_spec)
+                near_spec_temp = hires_teffs[nearest_spec_ind]
+                near_spec_logg = hires_loggs[nearest_spec_ind]
+                assigned_spec_teff.append(near_spec_temp)
+                assigned_spec_logg.append(near_spec_logg)
+                assigned_spectrum = hires_spec[nearest_spec_ind]
+                
+                assigned_flux_resampled = np.interp(hires_wave_grid, assigned_spectrum[:,0], assigned_spectrum[:,1])
+                assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+                assigned_integrated_spectra.append(hires_int_spec[nearest_spec_ind])
+                assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+                
+                #assigned_spectra.append(assigned_spectrum)
+                #assigned_cont.append(hires_cont[nearest_spec_ind])
+                #assigned_integrated_spectra.append(hires_int_spec[nearest_spec_ind])
+                
+            if spectra_library == 'WM':# and timestep_teffs_final[j] > 17600:
                 hires_choice.append('OB')
-                for i in range(len(hires_params)):
+                for i in range(len(hires_teffs)):
                     #distance_to_spec.append(abs(hires_teffs[i] - 10**timestep_temps_final[j]) + abs(hires_loggs[i] - specsyn_loggs[j]))
                     distance_to_spec.append((timestep_temps_final[j] - np.log10(hires_teffs[i]))**2 + 5*(hires_loggs[i] - specsyn_loggs[j])**2)
                 nearest_spec_ind = np.argmin(distance_to_spec)
@@ -1236,7 +1285,7 @@ def assign_spectra_to_grid_hires(timestep_temps_final,hires_params, hires_teffs,
                 assigned_cont.append(hires_cont[nearest_spec_ind])
                 assigned_integrated_spectra.append(hires_int_spec[nearest_spec_ind])
 
-            if POWR == True:
+            if spectra_library == 'PoWR':
                 hires_choice.append('OB')
                 for i in range(len(hires_teffs)):
                     #distance_to_spec.append(abs(hires_teffs[i] - 10**timestep_temps_final[j]) + abs(hires_loggs[i] - specsyn_loggs[j]))
@@ -1250,11 +1299,12 @@ def assign_spectra_to_grid_hires(timestep_temps_final,hires_params, hires_teffs,
                 assigned_spec_logg.append(near_spec_logg)
                 assigned_spectrum = hires_spec[nearest_spec_ind]
                 assinged_radius = timestep_radii_final[j]
-                assigned_flux_scaled = assigned_spectrum[:,1] *(((3.0856e9)**2.0)/((assinged_radius*6.96e10)**2.0)) * 1.0e20
+                assigned_flux_scaled = assigned_spectrum[:,1]# *(((3.0856e9)**2.0)/((assinged_radius*6.96e10)**2.0)) * 1.0e20
                 assigned_flux_scaled = assigned_flux_scaled * timestep_teffs_final[j] / near_spec_temp
                 assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_scaled)))
                 assigned_cont.append(hires_cont[nearest_spec_ind])
                 assigned_integrated_spectra.append(hires_int_spec[nearest_spec_ind])
+            
 
     return(assigned_integrated_spectra,assigned_spec_teff,assigned_spec_logg,assigned_spectra,assigned_cont, hires_choice)
 
@@ -1291,8 +1341,9 @@ def specsyn_hires(assigned_integrated_spectra, specsyn_bbfluxes, assigned_spectr
 
     population_nebular_resampled = np.interp(hires_wave_grid, population_nebular[:,0], population_nebular[:,1])
 
-    for i in range(len(assigned_spectra)):
+    for i in range(len(assigned_integrated_spectra)):
         xinte =  assigned_integrated_spectra[i] / specsyn_bbfluxes[i]
+
         assigned_f = assigned_spectra[i][:,1]
 
         #renormed_flux = assigned_f / xinte #turn on to have bb scaling in hires spectra
@@ -1881,8 +1932,8 @@ for i in range(len(times_steps)):
     population_Ha_continuum_flux.append(timestep_Ha_continuum_flux)
 
     if POWR == False:
-        hires_assigned_integrated_spectra,hires_assigned_spec_teff,hires_assigned_spec_logg,hires_assigned_spectra,hires_assigned_cont, hires_choice = assign_spectra_to_grid_hires(timestep_temps_final,hires_params, hires_teffs, hires_loggs, timestep_lums_final, timestep_H_abundances_final, timestep_masses_final, initial_masses, specsyn_cotests, specsyn_loggs)
-        hires_population_flux, hires_population_flux_norm, hires_population_nebular = specsyn_hires(hires_assigned_integrated_spectra, specsyn_bbfluxes, hires_assigned_spectra, hires_assigned_cont, specsyn_radii, No_stars, population_continuum)
+        hires_assigned_integrated_spectra,hires_assigned_spec_teff,hires_assigned_spec_logg,hires_assigned_spectra,hires_assigned_cont, hires_choice = assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs, timestep_lums_final, timestep_H_abundances_final, timestep_masses_final, initial_masses, specsyn_cotests, specsyn_loggs)
+        hires_population_flux, hires_population_flux_norm, hires_population_nebular = specsyn_hires(assigned_integrated_spectra, specsyn_bbfluxes, hires_assigned_spectra, hires_assigned_cont, specsyn_radii, No_stars, population_continuum)
         population_hires_flux_iterations.append(hires_population_flux)
         population_hires_flux_norm_iterations.append(hires_population_flux_norm)
         population_hires_assigned_spec_teff.append(hires_assigned_spec_teff)
@@ -1957,7 +2008,8 @@ if save_output == True:
         inputs_file.write('IMF_mass_limits = ' + str(IMF_mass_limits) + '\n')
         inputs_file.write('run_speed_mode = ' + run_speed_mode + '\n')
         inputs_file.write('Metallicity input = ' + Z + '\n')
-        inputs_file.write('Spectral library input = ' + SPEC + '\n')
+        inputs_file.write('SED library input = ' + SED_library + '\n')
+        inputs_file.write('spectra library input = ' + spectra_library + '\n')
         if rot == True:
             inputs_file.write('Rotation input = True' + '\n')
         if rot == False:
@@ -1977,7 +2029,11 @@ if save_output == True:
         if plot_ew == True:
             inputs_file.write('Equivalent width output choice = True' + '\n')
         if plot_ew == False:
-            inputs_file.write('Equivalent with output output choice = False' + '\n')
+            inputs_file.write('Equivalent width output choice = False' + '\n')
+        if plot_hires_spectra == True:
+            inputs_file.write('Hires spectra output choice = True' + '\n')
+        if plot_hires_spectra == False:
+            inputs_file.write('Hires spectra output choice = False' + '\n')
         
     np.savetxt(SBmodel_name + '/timesteps.txt', times_steps)
 
@@ -1988,7 +2044,8 @@ else:
     print('IMF_mass_limits = ' + str(IMF_mass_limits))
     print('run_speed_mode = ' + run_speed_mode)
     print('Metallicity input = ' + Z)
-    print('Spectral library input = ' + SPEC)
+    print('SED library input = ' + SED_library)
+    print('spectra library input = ' + spectra_library)
     if rot == True:
         print('Rotation input = True')
     if rot == False:
@@ -2009,12 +2066,51 @@ else:
         print('Equivalent width output choice = True')
     if plot_ew == False:
         print('Equivalent with output output choice = False')
+    if plot_hires_spectra == True:
+        print('Hires spectra output choice = True')
+    if plot_hires_spectra == False:
+        print('Hires spectra output output choice = False')
+
+if plot_isochrones == True:
     
-if plot_spec_with_time == True:
+    Hmin=0.0
+    Hmax=1.0
+    fig=plt.figure()
+    plt.style.use('default')
+    ax=fig.add_subplot(111)
+    sc1 = ax.scatter(population_teffs[10]/1000, population_lums[10], s=1, c=population_H_abundances[10], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    # ax.scatter(population_teffs[20]/1000, population_lums[20], label='pySB 2Myr', s=1)
+    # ax.scatter(population_teffs[30]/1000, population_lums[30], label='pySB 3Myr',  s=1)
+    sc1 = ax.scatter(population_teffs[30]/1000, population_lums[30], s=1, c=population_H_abundances[30], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    sc = ax.scatter(population_teffs[200]/1000, population_lums[200], s=1, c=population_H_abundances[200], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    sc = ax.scatter(population_teffs[300]/1000, population_lums[300], s=1, c=population_H_abundances[300], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    sc = ax.scatter(population_teffs[400]/1000, population_lums[400], s=1, c=population_H_abundances[400], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    #ax.scatter(population_teffs[50]/1000, population_lums[50], label='pySB 5Myr',  s=1)
+    ax.set_title('Isochrones for Z=0.014 without rotation', fontsize=15)
+    plt.xlabel('$T_\mathrm{eff}$ [kK]', fontsize=15)
+    plt.ylabel('log($L)\, [L_{\odot}$]', fontsize=15)
+    #plt.ylim(0,7)
+    #ax.text(67, 6.2, '1 Myr', fontsize=12, color="#1155cc")
+    #ax.text(40, 5.6, '3.1 Myr', fontsize=12, color="#1155cc")
+    plt.ylim(2.5,4.5)
+    plt.xlim(14,25)
+    ax.invert_xaxis()
+    ax.tick_params(labelsize=15)
+    fig.colorbar(sc, label='H abundance')
+    #ax.axvline(timestep_ex)
+    plt.tight_layout()
+    plt.legend(fontsize=12)
+    plt.show()
+    
+if plot_SED_with_time == True:
+    
+    SED_plot_choice_flux = np.log10(10**(np.log10(population_flux_iterations[int(spec_time*10)])+20.))
+    SED_plot_total_choice_flux = np.log10(10**(np.log10(population_flux_total_iterations[int(spec_time*10)])+20.))
+
     fig=plt.figure(figsize=(8,12), dpi=300)
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(wave_grid, np.log10(10**(np.log10(population_flux_total_iterations[int(spec_time*10)])+20.)), label=str(spec_time)+'Myr')
+    ax.plot(wave_grid, SED_plot_total_choice_flux, label=str(spec_time)+'Myr')
     plt.xlabel('Wavelength [$\AA$]', fontsize=20)
     plt.ylabel('log (Luminosity [$erg s^{-1} \AA^{-1}$])', fontsize=20)
     ax.legend(loc="best",fontsize=18)
@@ -2033,23 +2129,72 @@ if plot_spec_with_time == True:
             if rot == True:
                 np.save(SBmodel_name + '/rotVMSpySB_SED_stellar.npy', population_flux_iterations_send_save)
                 np.save(SBmodel_name + '/rotVMSpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
+                np.savetxt(SBmodel_name + '/rotVMSpySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/rotVMSpySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
                 np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
-                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+                np.savetxt(SBmodel_name + '/times_SED.txt', times_spectra)
             else:
                 np.save(SBmodel_name + '/VMSpySB_SED_stellar.npy', population_flux_iterations_send_save)
                 np.save(SBmodel_name + '/VMSpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
+                np.savetxt(SBmodel_name + '/VMSpySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/VMSpySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
                 np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
-                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+                np.savetxt(SBmodel_name + '/times_SED.txt', times_spectra)
         else:
             if rot == True:
                 np.save(SBmodel_name + '/rotpySB_SED_stellar.npy', population_flux_iterations_send_save)
                 np.save(SBmodel_name + '/rotpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
+                np.savetxt(SBmodel_name + '/rotpySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/rotpySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
                 np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
-                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+                np.savetxt(SBmodel_name + '/times_SED.txt', times_spectra)
             else:
                 np.save(SBmodel_name + '/pySB_SED_stellar.npy', population_flux_iterations_send_save)
                 np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
+                np.savetxt(SBmodel_name + '/pySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/pySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
                 np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
+                np.savetxt(SBmodel_name + '/times_SED.txt', times_spectra)
+                
+if plot_hires_spectra == True:
+    
+    hires_plot_choice_flux = 10**(np.log10(population_hires_flux_iterations[int(spec_time*10)]+1.0e-35)+20.)
+    
+    fig=plt.figure()
+    plt.style.use('default')
+    ax=fig.add_subplot(111)
+    ax.plot(hires_wave_grid, hires_plot_choice_flux, label='pySB t='+str(spec_time)+'Myr', color='tab:red')
+    ax.set_title('Hires ifa spectra', fontsize=12)
+    plt.xlabel('Wave', fontsize=12)
+    plt.ylabel('Flux', fontsize=12)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+        
+    if save_output == True:
+        ind_hires_spectra_output = np.where(np.isin(times_steps, times_spectra))[0]
+        hires_flux_iterations_send_save = np.array(population_hires_flux_iterations)[ind_hires_spectra_output]
+        if IMF_mass_limits[-1] > 120.:
+            if rot == True:
+                np.save(SBmodel_name + '/rotVMSpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+                np.savetxt(SBmodel_name + '/rotVMSpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
+                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+            else:
+                np.save(SBmodel_name + '/VMSpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+                np.savetxt(SBmodel_name + '/VMSpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
+                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+        else:
+            if rot == True:
+                np.save(SBmodel_name + '/rotpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+                np.savetxt(SBmodel_name + '/rotpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
+                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+            else:
+                np.save(SBmodel_name + '/pySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+                np.savetxt(SBmodel_name + '/pySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+                np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
                 np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
 
 if plot_ion_flux == True:
@@ -2057,7 +2202,6 @@ if plot_ion_flux == True:
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    #ax.plot(np.log10(times_steps_SB99), HI_ionflux_SB99, label='SB99')#-1.9)
     ax.plot(np.log10(times_steps), population_ion_HI_flux_iterations, label='pySB')
     plt.xlim(6.,8.)
     plt.ylim(44.,54.)
@@ -2072,7 +2216,6 @@ if plot_ion_flux == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     times_steps_log = np.log10(times_steps)
-    #ax.plot(np.log10(times_steps_SB99), HEI_ionflux_SB99, label='SB99')
     ax.plot(np.log10(times_steps), population_ion_HEI_flux_iterations, label='pySB')
     plt.xlim(6.,8.)
     plt.ylim(44.,54.)
@@ -2087,7 +2230,6 @@ if plot_ion_flux == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     times_steps_log = np.log10(times_steps)
-    #ax.plot(np.log10(times_steps_SB99), HEII_ionflux_SB99, label='SB99')
     ax.plot(np.log10(times_steps), population_ion_HEII_flux_iterations, label='pySB')
     plt.xlim(6.,8.)
     plt.ylim(38.,54.)
@@ -2101,7 +2243,6 @@ if plot_ion_flux == True:
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    #ax.plot(np.log10(times_steps_SB99), Lbol_SB99, label='SB99')
     ax.plot(np.log10(times_steps), population_ion_L_flux_iterations, label='pySB')
     plt.xlim(6.,7.3)
     plt.title('Luminosity over Time', fontsize=12)
@@ -2216,8 +2357,6 @@ if plot_ew == True:
     ax=fig.add_subplot(111)
     ax.plot(times_steps_log, population_Ha_ew, label='pySB Ha')
     #ax.plot(times_steps_log, population_Hb_ew, label='pySB Hb')
-    #ax.plot(np.log10(times_steps_SB99), Pb_ew, label='SB99 Pb')
-    #ax.plot(np.log10(times_steps_SB99), Bg_ew, label='SB99 Bg')
     #ax.plot(times_steps_log, population_Pb_ew, label='pySB Pb')
     #ax.plot(times_steps_log, population_Bg_ew, label='pySB Bg')
     plt.xlim(6.,8.)
