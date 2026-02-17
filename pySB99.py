@@ -22,7 +22,7 @@ st = time.time()
 M_total = 1.0e6
 
 IMF_exponents = [1.3, 2.3]
-IMF_mass_limits = 0.1, 0.5, 120.
+IMF_mass_limits = 0.1, 0.5, 300.
 
 #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
 run_speed_mode = 'DEFAULT' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
@@ -46,20 +46,15 @@ if plot_SED_with_time == True:
 if plot_hires_spectra == True:
     hires_spec_time = 2 #set age of spectrum to plot (in Myr)
 
-save_output = True
+save_output = True #Set as True (save output to folder) or False (print/display output only)
 
-times_spectra_start = 0.1e6 #yrs
-times_spectra_end = 50e6 #yrs
-time_step_spectra = 1e6 #yrs
+if save_output == True:
+    SBmodel_name = 'pySB99_test_model' #set the output folder name here!
 
 '''coming soon!'''
 plot_isochrones = False
 plot_spectral_types = False
 plot_SN_rate = False
-
-if save_output == True:
-    SBmodel_name = 'pySB99_test_model' #set the output folder name here!
-    os.mkdir(SBmodel_name)
     
 '''Load input files based on chosen metallicity and mass limits'''
 if Z =='MWC':
@@ -307,6 +302,9 @@ if Z == 'Z0':
     WN_spectra_powr = np.load(file_path + 'WN_spectra_powr_Z001.npy', allow_pickle=True)
     WC_spec_params_powr = np.load(file_path + 'WC_spec_params_powr_Z001.npy')
     WC_spectra_powr = np.load(file_path + 'WC_spectra_powr_Z001.npy', allow_pickle=True) 
+    
+if save_output == True:
+    os.mkdir(SBmodel_name)
 
 #Choose between PoWR and WMbasic for OB high resolution UV spectral grid
 POWR = False #PoWR OB grid capability is not yet implemented so this should be False to use the WMbasic OB grid
@@ -317,6 +315,9 @@ if POWR == False:
     hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
     empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
 
+times_spectra_start = 0.00e6 #yrs
+times_spectra_end = 50e6 #yrs
+time_step_spectra = 0.1e6 #yrs
 times_spectra = np.arange(times_spectra_start, times_spectra_end, time_step_spectra)
 times_steps = np.arange(0.00e6, 50e6, 0.1e6)
 
@@ -2123,38 +2124,15 @@ if plot_SED_with_time == True:
     
     if save_output == True:
         ind_spectra_output = np.where(np.isin(times_steps, times_spectra))[0]
-        population_flux_iterations_send_save = np.array(population_flux_iterations_send)[ind_spectra_output]
+        population_flux_iterations_send_save = population_flux_iterations_send
+        #population_flux_iterations_send_save = np.array(population_flux_iterations_send)[ind_spectra_output]
         population_flux_total_iterations_send_save = np.array(population_flux_total_iterations_send)[ind_spectra_output]
-        if IMF_mass_limits[-1] > 120.:
-            if rot == True:
-                np.save(SBmodel_name + '/rotVMSpySB_SED_stellar.npy', population_flux_iterations_send_save)
-                np.save(SBmodel_name + '/rotVMSpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
-                np.savetxt(SBmodel_name + '/rotVMSpySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
-                np.savetxt(SBmodel_name + '/rotVMSpySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
-                np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
-                np.savetxt(SBmodel_name + '/times_SED.txt', times_spectra)
-            else:
-                np.save(SBmodel_name + '/VMSpySB_SED_stellar.npy', population_flux_iterations_send_save)
-                np.save(SBmodel_name + '/VMSpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
-                np.savetxt(SBmodel_name + '/VMSpySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
-                np.savetxt(SBmodel_name + '/VMSpySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
-                np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
-                np.savetxt(SBmodel_name + '/times_SED.txt', times_spectra)
-        else:
-            if rot == True:
-                np.save(SBmodel_name + '/rotpySB_SED_stellar.npy', population_flux_iterations_send_save)
-                np.save(SBmodel_name + '/rotpySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
-                np.savetxt(SBmodel_name + '/rotpySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
-                np.savetxt(SBmodel_name + '/rotpySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
-                np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
-                np.savetxt(SBmodel_name + '/times_SED.txt', times_spectra)
-            else:
-                np.save(SBmodel_name + '/pySB_SED_stellar.npy', population_flux_iterations_send_save)
-                np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
-                np.savetxt(SBmodel_name + '/pySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
-                np.savetxt(SBmodel_name + '/pySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
-                np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
-                np.savetxt(SBmodel_name + '/times_SED.txt', times_spectra)
+        np.save(SBmodel_name + '/pySB_SED_stellar.npy', np.array(population_flux_iterations_send_save))
+        np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
+        np.savetxt(SBmodel_name + '/pySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
+        np.savetxt(SBmodel_name + '/pySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
+        np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
+        np.savetxt(SBmodel_name + '/SED_times.txt', times_spectra)
                 
 if plot_hires_spectra == True:
     
@@ -2178,6 +2156,7 @@ if plot_hires_spectra == True:
     ax=fig.add_subplot(111)
     ax.plot(hires_wave_grid, hires_plot_choice_flux_norm, label='pySB t='+str(spec_time)+'Myr', color='tab:red')
     ax.set_title('Hires ifa spectra', fontsize=12)
+    plt.xlim(900,2000)
     plt.xlabel('Wave', fontsize=12)
     plt.ylabel('Normalised Flux', fontsize=12)
     plt.tight_layout()
@@ -2188,36 +2167,13 @@ if plot_hires_spectra == True:
         ind_hires_spectra_output = np.where(np.isin(times_steps, times_spectra))[0]
         hires_flux_iterations_send_save = np.array(population_hires_flux_iterations)[ind_hires_spectra_output]
         hires_flux_norm_iterations_send_save = np.array(population_hires_flux_norm_iterations)[ind_hires_spectra_output]
-        if IMF_mass_limits[-1] > 120.:
-            if rot == True:
-                np.save(SBmodel_name + '/rotVMSpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
-                np.save(SBmodel_name + '/rotVMSpySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
-                np.savetxt(SBmodel_name + '/rotVMSpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
-                np.savetxt(SBmodel_name + '/rotVMSpySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
-                np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
-                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
-            else:
-                np.save(SBmodel_name + '/VMSpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
-                np.save(SBmodel_name + '/VMSpySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
-                np.savetxt(SBmodel_name + '/VMSpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
-                np.savetxt(SBmodel_name + '/VMSpySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
-                np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
-                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
-        else:
-            if rot == True:
-                np.save(SBmodel_name + '/rotpySB_hires_spectrum.npy', hires_flux_iterations_send_save)
-                np.save(SBmodel_name + '/rotpySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
-                np.savetxt(SBmodel_name + '/rotpySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
-                np.savetxt(SBmodel_name + '/rotpySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
-                np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
-                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
-            else:
-                np.save(SBmodel_name + '/pySB_hires_spectrum.npy', hires_flux_iterations_send_save)
-                np.save(SBmodel_name + '/pySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
-                np.savetxt(SBmodel_name + '/pySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
-                np.savetxt(SBmodel_name + '/pySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
-                np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
-                np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+
+        np.save(SBmodel_name + '/pySB_hires_spectrum.npy', hires_flux_iterations_send_save)
+        np.save(SBmodel_name + '/pySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
+        np.savetxt(SBmodel_name + '/pySB_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+        np.savetxt(SBmodel_name + '/pySB_norm_spectrum_'+str(int(spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
+        np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
+        np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
 
 if plot_ion_flux == True:
 
@@ -2275,28 +2231,11 @@ if plot_ion_flux == True:
     plt.show()
 
     if save_output == True:
-        if IMF_mass_limits[-1] > 120.:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/rotVMSbololum.txt', population_ion_L_flux_iterations)
-                np.savetxt(SBmodel_name + '/rotVMSion_flux_HI.txt', population_ion_HI_flux_iterations)
-                np.savetxt(SBmodel_name + '/rotVMSion_flux_HeI.txt', population_ion_HEI_flux_iterations)
-                np.savetxt(SBmodel_name + '/rotVMSion_flux_HeII.txt', population_ion_HEII_flux_iterations)
-            else:
-                np.savetxt(SBmodel_name + '/VMSbololum.txt', population_ion_L_flux_iterations)
-                np.savetxt(SBmodel_name + '/VMSion_flux_HI.txt', population_ion_HI_flux_iterations)
-                np.savetxt(SBmodel_name + '/VMSion_flux_HeI.txt', population_ion_HEI_flux_iterations)
-                np.savetxt(SBmodel_name + '/VMSion_flux_HeII.txt', population_ion_HEII_flux_iterations)
-        else:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/rotbololum.txt', population_ion_L_flux_iterations)
-                np.savetxt(SBmodel_name + '/rotion_flux_HI.txt', population_ion_HI_flux_iterations)
-                np.savetxt(SBmodel_name + '/rotion_flux_HeI.txt', population_ion_HEI_flux_iterations)
-                np.savetxt(SBmodel_name + '/rotion_flux_HeII.txt', population_ion_HEII_flux_iterations)
-            else:
-                np.savetxt(SBmodel_name + '/bololum.txt', population_ion_L_flux_iterations)
-                np.savetxt(SBmodel_name + '/ion_flux_HI.txt', population_ion_HI_flux_iterations)
-                np.savetxt(SBmodel_name + '/ion_flux_HeI.txt', population_ion_HEI_flux_iterations)
-                np.savetxt(SBmodel_name + '/ion_flux_HeII.txt', population_ion_HEII_flux_iterations)
+
+        np.savetxt(SBmodel_name + '/bololum.txt', population_ion_L_flux_iterations)
+        np.savetxt(SBmodel_name + '/ion_flux_HI.txt', population_ion_HI_flux_iterations)
+        np.savetxt(SBmodel_name + '/ion_flux_HeI.txt', population_ion_HEI_flux_iterations)
+        np.savetxt(SBmodel_name + '/ion_flux_HeII.txt', population_ion_HEII_flux_iterations)
 
 if plot_wind == True:
     
@@ -2330,20 +2269,9 @@ if plot_wind == True:
     plt.show()
     
     if save_output == True:
-        if IMF_mass_limits[-1] > 120.:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/rotVMSwindpower.txt', population_windpowers)
-                np.savetxt(SBmodel_name + '/rotVMSwindmom.txt', population_windmoms)    
-            else:
-                np.savetxt(SBmodel_name + '/VMSwindpower.txt', population_windpowers)
-                np.savetxt(SBmodel_name + '/VMSwindmom.txt', population_windmoms)    
-        else:
-            if rot ==True:
-                np.savetxt(SBmodel_name + '/rotwindpower.txt', population_windpowers)
-                np.savetxt(SBmodel_name + '/rotwindmom.txt', population_windmoms)
-            else:
-                np.savetxt(SBmodel_name + '/windpower.txt', population_windpowers)
-                np.savetxt(SBmodel_name + '/windmom.txt', population_windmoms)  
+
+        np.savetxt(SBmodel_name + '/windpower.txt', population_windpowers)
+        np.savetxt(SBmodel_name + '/windmom.txt', population_windmoms)  
             
 if plot_uv_slope == True:   
 
@@ -2361,16 +2289,8 @@ if plot_uv_slope == True:
     plt.show()
     
     if save_output == True:
-        if IMF_mass_limits[-1] > 120.:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/rotVMSuv_slope.txt', population_uv_slopes_beta)
-            else:
-                np.savetxt(SBmodel_name + '/VMSuv_slope.txt', population_uv_slopes_beta)
-        else:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/rotuv_slope.txt', population_uv_slopes_beta)
-            else:
-                np.savetxt(SBmodel_name + '/uv_slope.txt', population_uv_slopes_beta)
+        
+        np.savetxt(SBmodel_name + '/uv_slope.txt', population_uv_slopes_beta)
         
 if plot_ew == True:
     
@@ -2390,28 +2310,10 @@ if plot_ew == True:
     plt.show()
 
     if save_output == True:
-        if IMF_mass_limits[-1] > 120.:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/rotVMS_Haew.txt', population_Ha_ew)
-                np.savetxt(SBmodel_name + '/rotVMS_Hbew.txt', population_Hb_ew)
-                np.savetxt(SBmodel_name + '/rotVMS_Pbew.txt', population_Pb_ew)
-                np.savetxt(SBmodel_name + '/rotVMS_Bgew.txt', population_Bg_ew)
-            else:
-                np.savetxt(SBmodel_name + '/VMS_Haew.txt', population_Ha_ew)
-                np.savetxt(SBmodel_name + '/VMS_Hbew.txt', population_Hb_ew)
-                np.savetxt(SBmodel_name + '/VMS_Pbew.txt', population_Pb_ew)
-                np.savetxt(SBmodel_name + '/VMS_Bgew.txt', population_Bg_ew)
-        else:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/Haew.txt', population_Ha_ew)
-                np.savetxt(SBmodel_name + '/Hbew.txt', population_Hb_ew)
-                np.savetxt(SBmodel_name + '/Pbew.txt', population_Pb_ew)
-                np.savetxt(SBmodel_name + '/Bgew.txt', population_Bg_ew)
-            else:
-                np.savetxt(SBmodel_name + '/Haew.txt', population_Ha_ew)
-                np.savetxt(SBmodel_name + '/Hbew.txt', population_Hb_ew)
-                np.savetxt(SBmodel_name + '/Pbew.txt', population_Pb_ew)
-                np.savetxt(SBmodel_name + '/Bgew.txt', population_Bg_ew)
+        np.savetxt(SBmodel_name + '/Haew.txt', population_Ha_ew)
+        np.savetxt(SBmodel_name + '/Hbew.txt', population_Hb_ew)
+        np.savetxt(SBmodel_name + '/Pbew.txt', population_Pb_ew)
+        np.savetxt(SBmodel_name + '/Bgew.txt', population_Bg_ew)
                 
 if plot_colours == True:
     
@@ -2433,15 +2335,6 @@ if plot_colours == True:
     colours_header = 'V, U, I, B, M_V'
     
     if save_output == True:
-        if IMF_mass_limits[-1] > 120.:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/rotVMS_colours.txt', colours_output, header=colours_header)
-                
-            else:
-                np.savetxt(SBmodel_name + '/VMS_colours.txt', colours_output, header=colours_header)
-        else:
-            if rot == True:
-                np.savetxt(SBmodel_name + '/rot_colours.txt', colours_output, header=colours_header)
-            else:
-                np.savetxt(SBmodel_name + '/colours.txt', colours_output, header=colours_header)
+        
+        np.savetxt(SBmodel_name + '/colours.txt', colours_output, header=colours_header)
                 
