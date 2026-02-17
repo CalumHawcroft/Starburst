@@ -25,7 +25,7 @@ IMF_exponents = [1.3, 2.3]
 IMF_mass_limits = 0.1, 0.5, 120.
 
 #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
-run_speed_mode = 'DEFAULT' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
+run_speed_mode = 'FAST' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
 
 Z = 'SMC' #Z options are MWC, MW, LMC, SMC, IZw18, XMP and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004, 0.00001 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
 SED_library = 'FW' #options are FW and WM which refer to the Fastwind and WMbasic OB low resolution spectral libraries
@@ -50,7 +50,7 @@ if plot_hires_spectra == True:
 if plot_SN_rate == True:
     maximum_SN_mass = 40. #maximum stellar initial mass (in Msol) that is accounted for as going supernova
 
-save_output = True #Set as True (save output to folder) or False (print/display output only)
+save_output = False #Set as True (save output to folder) or False (print/display output only)
 
 if save_output == True:
     SBmodel_name = 'pySB99_test_model' #set the output folder name here!
@@ -2036,11 +2036,13 @@ for i in range(len(times_steps)):
     population_co_tests.append(specsyn_cotests)
     population_specsyn_loggs.append(specsyn_loggs)
     population_specsyn_teffs.append(specsyn_teffs)
-    SN_masses = np.array(initial_masses)[ind_SN_masses]
-    population_SN_masses.append(SN_masses)
-    population_SN_ind.append(ind_SN_masses)
     population_masses_test.append(timestep_mass_test)
     population_continuum_iterations.append(population_continuum)
+    
+    if plot_SN_rate == True:
+        SN_masses = np.array(initial_masses)[ind_SN_masses]
+        population_SN_masses.append(SN_masses)
+        population_SN_ind.append(ind_SN_masses)
     
 if plot_SN_rate == True:
     SN_rates = get_SN_rate(population_SN_ind)
