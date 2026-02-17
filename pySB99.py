@@ -39,12 +39,16 @@ plot_ew = True
 plot_colours = True
 plot_SED_with_time = True
 plot_hires_spectra = True
+plot_SN_rate = False
 
 if plot_SED_with_time == True:
     spec_time = 2 #set age of SED to plot (in Myr)
     
 if plot_hires_spectra == True:
     hires_spec_time = 2 #set age of spectrum to plot (in Myr)
+    
+if plot_SN_rate == True:
+    maximum_SN_mass = 40. #maximum stellar initial mass (in Msol) that is accounted for as going supernova
 
 save_output = True #Set as True (save output to folder) or False (print/display output only)
 
@@ -54,7 +58,6 @@ if save_output == True:
 '''coming soon!'''
 plot_isochrones = False
 plot_spectral_types = False
-plot_SN_rate = False
     
 '''Load input files based on chosen metallicity and mass limits'''
 if Z =='MWC':
@@ -1761,6 +1764,46 @@ def colours(population_flux):
 
     return(V_mag, U_mag, I_mag, B_mag, absV_mag)
 
+def get_SN_rate(population_SN_ind):
+    population_new_SN_mass_inds = []
+    for i in range(len(population_SN_ind)): #population_SN_ind gives the list of all indices for masses that have gone SN so far
+        if i == len(population_SN_ind)-1:
+            population_new_SN_mass_inds.append([])
+            break
+        pop_SN_ind_test = population_SN_ind[i+1][:-len(population_SN_ind[i])] #this just finds all the mass indices that have gone supernova in the latest timestep 
+        population_new_SN_mass_inds.append(pop_SN_ind_test)
+    
+    #This just counts the number of timesteps which have passed since the last set of SN
+    ind_SN_times = []
+    counter = 0
+    for i in range(len(population_new_SN_mass_inds)):
+        if len(population_new_SN_mass_inds[i]) < 1:
+            ind_SN_times.append(1)
+            counter = counter + 1
+        else:
+            if counter == 0:
+                ind_SN_times.append(1)
+            else:
+                ind_SN_times.append(counter)
+            counter = 0
+        
+    #For each mass index that goes SN in a given timestep, divide the total number of stars by the time since the last set of SN to get the rate
+    population_SN_rate = []  
+    for i in range(len(population_new_SN_mass_inds)):
+        pop_SN_calc = population_new_SN_mass_inds[i]
+    
+        SN_rate_step = []
+        for j in pop_SN_calc:
+            SN_rate_mass = No_stars[j] / ( 1e5 * (ind_SN_times[i] + 1))
+            
+            SN_rate_step.append(SN_rate_mass)
+        SN_rate_step_sum = np.sum(SN_rate_step)
+        population_SN_rate.append(SN_rate_step_sum)
+        
+    population_SN_rate = np.array(population_SN_rate) + 1.0e-30
+    population_SN_rate_log = np.log10(population_SN_rate)
+    return(population_SN_rate_log)
+
 def compute_radii(temps, lums):
 #    4 pi R^2 sigma T^4
     sigma = 5.670 *10**(-8)
@@ -1953,9 +1996,9 @@ for i in range(len(times_steps)):
             population_hires_assigned_spectra.append(hires_assigned_spectra)
 
 
+    if plot_SN_rate == True:
 
-
-    ind_SN_masses = [i for i in range(len(timestep_lums_final)) if timestep_lums_final[i] == -20.0]
+        ind_SN_masses = [i for i in range(len(timestep_lums_final)) if timestep_lums_final[i] == -20.0 and initial_masses[i] <= maximum_SN_mass]
 
     #break
 
@@ -1998,6 +2041,10 @@ for i in range(len(times_steps)):
     population_SN_ind.append(ind_SN_masses)
     population_masses_test.append(timestep_mass_test)
     population_continuum_iterations.append(population_continuum)
+    
+if plot_SN_rate == True:
+    SN_rates = get_SN_rate(population_SN_ind)
+
 et = time.time()
 elapsed_time = et - st
 print('Execution time:', elapsed_time, 'seconds')
@@ -2337,4 +2384,36 @@ if plot_colours == True:
     if save_output == True:
         
         np.savetxt(SBmodel_name + '/colours.txt', colours_output, header=colours_header)
+        
+if plot_SN_rate == True:
+    
+    fig=plt.figure()
+    plt.style.use('default')
+    ax=fig.add_subplot(111)
+    ax.plot(np.log10(times_steps), SN_rates, label='pySB')
+    plt.xlim(6.,8.)
+    plt.ylim(-4.,-1.8)
+    plt.title('SN rate over Time', fontsize=12)
+    plt.xlabel('Time', fontsize=12)
+    plt.ylabel('SN rate ', fontsize=12)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+    
+    fig=plt.figure()
+    plt.style.use('default')
+    ax=fig.add_subplot(111)
+    ax.scatter(np.log10(times_steps), SN_rates, label='pySB')
+    plt.xlim(6.,8.)
+    plt.ylim(-5.,-1.8)
+    plt.title('SN rate over Time', fontsize=12)
+    plt.xlabel('Time', fontsize=12)
+    plt.ylabel('SN rate ', fontsize=12)
+    plt.tight_layout()
+    plt.legend()
+    plt.show()
+    
+    if save_output == True:
+        
+        np.savetxt(SBmodel_name + '/SNrate.txt', np.column_stack((times_steps, SN_rates)))
                 
