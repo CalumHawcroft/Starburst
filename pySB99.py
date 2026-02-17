@@ -22,7 +22,7 @@ st = time.time()
 M_total = 1.0e6
 
 IMF_exponents = [1.3, 2.3]
-IMF_mass_limits = 0.1, 0.5, 300.
+IMF_mass_limits = 0.1, 0.5, 120.
 
 #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
 run_speed_mode = 'DEFAULT' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
