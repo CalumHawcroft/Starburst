@@ -18,45 +18,65 @@ import os
 # get the start time
 st = time.time()
 
-'''SFR is no longer an input option and instead will be applied through a SFR light-ratio weighting method post-processing, which is still in progress'''
-M_total = 1.0e6
+input_option = 'INPUT_FILE' #INPUT_FILE option to read in from an additional input file, other option is MAIN_CODE to define all input variables in the main code with no input file
 
-IMF_exponents = [1.3, 2.3]
-IMF_mass_limits = 0.1, 0.5, 120.
+input_imf_option = False
 
-#Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
-run_speed_mode = 'FAST' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
+if input_option == 'INPUT_FILE':
+    from pysb_inputs import *
 
-Z = 'SMC' #Z options are MWC, MW, LMC, SMC, IZw18, XMP and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004, 0.00001 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
-SED_library = 'FW' #options are FW and WM which refer to the Fastwind and WMbasic OB low resolution spectral libraries
-spectra_library = 'WM' #options are WM which refer tos the WMbasic OB high resolution spectral library. PoWR and FW to come soon
-rot = False #options are True to use tracks with 0.4v_critical rotation or False for non-rotating tracks
-
-plot_ion_flux = True
-plot_wind = True
-plot_uv_slope = True
-plot_ew = True
-plot_colours = True
-plot_SED_with_time = True
-plot_hires_spectra = True
-plot_SN_rate = False
-
-if plot_SED_with_time == True:
-    spec_time = 2 #set age of SED to plot (in Myr)
+elif input_option == 'MAIN_CODE':
+    '''SFR is no longer an input option and instead will be applied through a SFR light-ratio weighting method post-processing, which is still in progress'''
+    M_total = 1.0e6 #Msol
     
-if plot_hires_spectra == True:
-    hires_spec_time = 2 #set age of spectrum to plot (in Myr)
+    IMF_exponents = [1.3, 2.3]
+    IMF_mass_limits = 0.1, 0.5, 120.
     
-if plot_SN_rate == True:
-    maximum_SN_mass = 40. #maximum stellar initial mass (in Msol) that is accounted for as going supernova
+    output_age = 2.0
+    
+    #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
+    run_speed_mode = 'FAST' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
+    
+    Z = 'MW' #Z options are MWC, MW, LMC, SMC, IZw18, XMP and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004, 0.00001 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
+    SED_library = 'FW' #options are FW, WM and PoWR which refer to the Fastwind, WMbasic and PoWR OB low resolution spectral libraries
+    spectra_library = 'WM' #options are WM which refer tos the WMbasic OB high resolution spectral library. PoWR and FW to come soon
+    rot = False #options are True to use tracks with 0.4v_critical rotation or False for non-rotating tracks
+    
+    plot_ion_flux = True
+    plot_wind = True
+    plot_uv_slope = True
+    plot_ew = True
+    plot_colours = True
+    plot_SED_with_time = True
+    plot_hires_spectra = True
+    plot_SN_rate = True
+    plot_isochrones = True
+    
+    times_spectra_end = 50e6 #Set the end time for output spectra. Typically set at 50Myr, should take ~1min to run in default mode, can be increased but pySB is not optimised for older populations so please use with some caution (let me know if anything looks strange)
+    
+    input_imf_option = False #If False the IMF is defined as in the main code, if True the IMF is read in through an external file. The current format is to read in a list of individual stellar masses, which are then counted and sorted into bins. This format was the easiest way to generate a stochastically sampled IMF.
+    
+    save_output = False #Set as True (save output to folder) or False (print/display output only)
 
-save_output = False #Set as True (save output to folder) or False (print/display output only)
-
-if save_output == True:
-    SBmodel_name = 'pySB99_test_model' #set the output folder name here!
+    if input_imf_option == True:
+        stochastic_imf_file = 'chabrier_stars.npy'
+    
+    if plot_SED_with_time == True:
+        spec_time = output_age #set age of SED to plot (in Myr)
+        
+    if plot_hires_spectra == True:
+        hires_spec_time = output_age #set age of spectrum to plot (in Myr)
+        
+    if plot_SN_rate == True:
+        maximum_SN_mass = 40. #maximum stellar initial mass (in Msol) that is accounted for as going supernova
+    
+    if save_output == True:
+        SBmodel_name = 'Z00_V00_M120_Jul191' #set the output folder name here!
+        
+    if spectra_library == 'PoWR':
+        mass_loss_rate_option = 'DEFAULT' #Mdot options are DEFAULT (Vd3), HIGH, MODERATE and LOW. Default has only be implemented for now, also not all options will be available for all metallicities
 
 '''coming soon!'''
-plot_isochrones = False
 plot_spectral_types = False
     
 '''Load input files based on chosen metallicity and mass limits'''
@@ -76,12 +96,36 @@ if Z =='MWC':
         spectra_grid_file = file_path + 'WMbasic_OB_Z020_test.dat'
     if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z020_VMS.txt'
+    if SED_library == 'PoWR':
+        spectra_grid_file = file_path + 'POWR_grid_ob_vd3_Z014.txt'
     if spectra_library == 'WM':
         hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
         empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
         hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
         hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
         hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy')
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy') 
+    if spectra_library == 'PoWR':
+        hires_wave_grid = np.linspace(920, 3100, 10000)
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy') 
+        
+        if mass_loss_rate_option == 'DEFAULT':
+            hires_teffs = np.genfromtxt(file_path + 'mw_ob_vd3_hires_teffs.txt')
+            hires_loggs = np.genfromtxt(file_path + 'mw_ob_vd3_hires_loggs.txt')
+            hires_logls = np.genfromtxt(file_path + 'mw_ob_vd3_hires_logls.txt')
+            hires_spec_reformed = np.genfromtxt(file_path + 'mw_ob_vd3_hires_uv_calib.txt') #each spectrum is a row
+            hires_radii = (((3.828*10**(26)*10**hires_logls)/(4*3.14*5.67*10**-8*hires_teffs**4))**0.5)/(7*10**8)
+            hires_spec_norm = np.genfromtxt(file_path + 'mw_ob_vd3_hires_uv_norm.txt') #each spectrum is a row
+        
     lowmass_params = np.load(file_path + 'spec_params_lowmassp00.npy')
     lowmass_flux = np.load(file_path + 'lcb97_p00_reform.npy')# * 12
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z020.npy')
@@ -92,7 +136,7 @@ if Z =='MWC':
     WN_spectra_powr = np.load(file_path + 'WN_spectra_powr_Z020.npy', allow_pickle=True)
     WC_spec_params_powr = np.load(file_path + 'WC_spec_params_powr_Z020.npy')
     WC_spectra_powr = np.load(file_path + 'WC_spectra_powr_Z020.npy', allow_pickle=True) 
-
+    
 if Z == 'MW':
     file_path = 'pySB99_files/Z014_pySB99_files/'
     if rot == True:
@@ -103,11 +147,16 @@ if Z == 'MW':
         evo_tracks = np.load(file_path + 'Z014v40_VMS_tracks.npy')
         minimum_wr_mass=20.
     elif rot == False:
-        mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 11.5, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]        
+        #mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 11.5, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]        
+        mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]  
         if IMF_mass_limits[-1] > 500.:
             print('Tracks do not exist at Z=0.014 above 500Msol')
             exit()
-        evo_tracks = np.load(file_path + 'Z014v00_VMS_tracks.npy')
+        #evo_tracks = np.load(file_path + 'Z014v00_VMS_tracks.npy')
+        evo_tracks = np.load(file_path + 'Z014v40_VMS_tracks_eleventst.npy')
+
+        # evo_tracks_eleventst = np.delete(evo_tracks, np.s_[7600:8000], 0)
+        # np.save('Z014v40_VMS_tracks_eleventst.npy', evo_tracks_eleventst)
         minimum_wr_mass=25.
     if SED_library == 'WM':
         spectra_grid_file = file_path + 'WMbasic_OB_Z020_test.dat'
@@ -115,12 +164,36 @@ if Z == 'MW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z014.txt'
         if IMF_mass_limits[-1] > 120.0:
             spectra_grid_file = file_path + 'FW_SB_grid_Z014_VMS.txt'
+    if SED_library == 'PoWR':
+        spectra_grid_file = file_path + 'POWR_grid_ob_vd3_Z014.txt'
     if spectra_library == 'WM':
         hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
         empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
         hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
         hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
         hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy')
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy') 
+    if spectra_library == 'PoWR':
+        hires_wave_grid = np.linspace(920, 3100, 10000)
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_p00_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_p00_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_p00.npy') 
+        
+        if mass_loss_rate_option == 'DEFAULT':
+            hires_teffs = np.genfromtxt(file_path + 'mw_ob_vd3_hires_teffs.txt')
+            hires_loggs = np.genfromtxt(file_path + 'mw_ob_vd3_hires_loggs.txt')
+            hires_logls = np.genfromtxt(file_path + 'mw_ob_vd3_hires_logls.txt')
+            hires_radii = (((3.828*10**(26)*10**hires_logls)/(4*3.14*5.67*10**-8*hires_teffs**4))**0.5)/(7*10**8)
+            hires_spec_norm = np.genfromtxt(file_path + 'mw_ob_vd3_hires_uv_norm.txt') #each spectrum is a row
+            hires_spec_reformed = np.genfromtxt(file_path + 'mw_ob_vd3_hires_uv_calib.txt') #each spectrum is a row
+
     lowmass_params = np.load(file_path + 'spec_params_lowmassp00.npy')
     lowmass_flux = np.load(file_path + 'lcb97_p00_reform.npy')# * 12
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z020.npy')
@@ -151,12 +224,35 @@ if Z == 'LMC':
         if IMF_mass_limits[-1] > 120.0:
             spectra_grid_file = file_path + 'FW_SB_grid_Z006_VMS.txt' #VMS with a few more converge models (fixed Q)
             #spectra_grid_file = 'FW_SB_gridSB99_LMC_all.txt' (same but a few less converged models and tailored wind parameters)
+    if SED_library == 'PoWR':
+        spectra_grid_file = file_path + 'POWR_grid_ob_vd3_Z006.txt'
     if spectra_library == 'WM':
         hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
         empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
         hires_flux = np.load(file_path + 'ifa_line_m04_reform.npy')
         hires_cont_flux = np.load(file_path + 'ifa_cont_m04_reform.npy')
         hires_params = np.load(file_path + 'spec_params_ifa_line_m04.npy')
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m04_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m04_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m04.npy')  
+    if spectra_library == 'PoWR':
+        hires_wave_grid = np.linspace(920, 3100, 10000)
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m04_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m04_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m04.npy')
+        
+        if mass_loss_rate_option == 'DEFAULT':
+            hires_teffs = np.genfromtxt(file_path + 'lmc_ob_vd3_hires_teffs.txt')
+            hires_loggs = np.genfromtxt(file_path + 'lmc_ob_vd3_hires_loggs.txt')
+            hires_logls = np.genfromtxt(file_path + 'lmc_ob_vd3_hires_logls.txt')
+            hires_spec_reformed = np.genfromtxt(file_path + 'lmc_ob_vd3_hires_uv_calib.txt') #each spectrum is a row
+            hires_radii = (((3.828*10**(26)*10**hires_logls)/(4*3.14*5.67*10**-8*hires_teffs**4))**0.5)/(7*10**8)
+            hires_spec_norm = np.genfromtxt(file_path + 'lmc_ob_vd3_hires_uv_norm.txt') #each spectrum is a row
     lowmass_params = np.load(file_path + 'spec_params_lowmassm04.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m04_reform.npy')# * 12
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z008.npy')
@@ -184,12 +280,35 @@ if Z == 'SMC':
         spectra_grid_file = file_path + 'WMbasic_OB_Z004_tst.dat'
     if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z002.txt'
+    if SED_library == 'PoWR':
+        spectra_grid_file = file_path + 'POWR_grid_ob_vd3_Z002.txt'
     if spectra_library == 'WM':
         hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
         empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
         hires_flux = np.load(file_path + 'ifa_line_m07_reform_new.npy')
         hires_cont_flux = np.load(file_path + 'ifa_cont_m07_reform_new.npy')
         hires_params = np.load(file_path + 'spec_params_ifa_line_m07_new.npy')
+
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m07_reform_new.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m07_reform_new.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m07_new.npy')        
+    if spectra_library == 'PoWR':
+        hires_wave_grid = np.linspace(920, 3100, 10000)
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m07_reform_new.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m07_reform_new.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m07_new.npy')
+        
+        if mass_loss_rate_option == 'DEFAULT':
+            hires_teffs = np.genfromtxt(file_path + 'smc_ob_vd3_hires_teffs.txt')
+            hires_loggs = np.genfromtxt(file_path + 'smc_ob_vd3_hires_loggs.txt')
+            hires_logls = np.genfromtxt(file_path + 'smc_ob_vd3_hires_logls.txt')
+            hires_spec_reformed = np.genfromtxt(file_path + 'smc_ob_vd3_hires_uv_calib.txt') #each spectrum is a row
+            hires_radii = (((3.828*10**(26)*10**hires_logls)/(4*3.14*5.67*10**-8*hires_teffs**4))**0.5)/(7*10**8)
+            hires_spec_norm = np.genfromtxt(file_path + 'smc_ob_vd3_hires_uv_norm.txt') #each spectrum is a row
     lowmass_params = np.load(file_path + 'spec_params_lowmassm07.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m07_reform.npy')# * 12
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z004.npy')
@@ -217,12 +336,35 @@ if Z == 'IZw18':
         spectra_grid_file = file_path + 'WMbasic_OB_Z001_tst.dat'
     if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z0004.txt'
+    if SED_library == 'PoWR':
+        spectra_grid_file = file_path + 'POWR_grid_ob_vd3_Z0004.txt'
     if spectra_library == 'WM':
         hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
         empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
         hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
         hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
         hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')  
+    if spectra_library == 'PoWR':
+        hires_wave_grid = np.linspace(920, 3100, 10000)
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
+        
+        if mass_loss_rate_option == 'DEFAULT':
+            hires_teffs = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_teffs.txt')
+            hires_loggs = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_loggs.txt')
+            hires_logls = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_logls.txt')
+            hires_spec_reformed = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_uv_calib.txt') #each spectrum is a row
+            hires_radii = (((3.828*10**(26)*10**hires_logls)/(4*3.14*5.67*10**-8*hires_teffs**4))**0.5)/(7*10**8)
+            hires_spec_norm = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_uv_norm.txt') #each spectrum is a row
     lowmass_params = np.load(file_path + 'spec_params_lowmassm13.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m13_reform.npy')# * 12
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z001.npy')
@@ -250,12 +392,36 @@ if Z == 'XMP':
         spectra_grid_file = file_path + 'WMbasic_OB_Z001_tst.dat'
     if SED_library == 'FW':
         spectra_grid_file = file_path + 'FW_SB_grid_Z00001.txt'
+    if SED_library == 'PoWR':
+        spectra_grid_file = file_path + 'POWR_grid_ob_vd3_Z0004.txt'
     if spectra_library == 'WM':
         hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
         empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
         hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
         hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
         hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')  
+    if spectra_library == 'PoWR':
+        hires_wave_grid = np.linspace(920, 3100, 10000)
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
+        
+        if mass_loss_rate_option == 'DEFAULT':
+            hires_teffs = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_teffs.txt')
+            hires_loggs = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_loggs.txt')
+            hires_logls = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_logls.txt')
+            hires_spec_reformed = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_uv_calib.txt') #each spectrum is a row
+            hires_radii = (((3.828*10**(26)*10**hires_logls)/(4*3.14*5.67*10**-8*hires_teffs**4))**0.5)/(7*10**8)
+            hires_spec_norm = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_uv_norm.txt') #each spectrum is a row
+        
     lowmass_params = np.load(file_path + 'spec_params_lowmassm13.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m13_reform.npy')# * 12
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z001.npy')
@@ -289,12 +455,36 @@ if Z == 'Z0':
         spectra_grid_file = file_path + 'FW_SB_grid_Z0.txt'
         if IMF_mass_limits[-1] > 120.0:
             spectra_grid_file = file_path + 'FW_SB_grid_Z0_VMS.txt'
+    if SED_library == 'PoWR':
+        spectra_grid_file = file_path + 'POWR_grid_ob_vd3_Z0004.txt'
     if spectra_library == 'WM':
         hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
         empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
         hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
         hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
         hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')  
+    if spectra_library == 'PoWR':
+        hires_wave_grid = np.linspace(920, 3100, 10000)
+        empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+        
+        lowmass_hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+        lowmass_hires_flux = np.load(file_path + 'ifa_line_m13_reform.npy')
+        lowmass_hires_cont_flux = np.load(file_path + 'ifa_cont_m13_reform.npy')
+        lowmass_hires_params = np.load(file_path + 'spec_params_ifa_line_m13.npy')
+        
+        if mass_loss_rate_option == 'DEFAULT':
+            hires_teffs = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_teffs.txt')
+            hires_loggs = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_loggs.txt')
+            hires_logls = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_logls.txt')
+            hires_spec_reformed = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_uv_calib.txt') #each spectrum is a row
+            hires_radii = (((3.828*10**(26)*10**hires_logls)/(4*3.14*5.67*10**-8*hires_teffs**4))**0.5)/(7*10**8)
+            hires_spec_norm = np.genfromtxt(file_path + 'subsmc_ob_vd3_hires_uv_norm.txt') #each spectrum is a row
+        
     lowmass_params = np.load(file_path + 'spec_params_lowmassm13.npy')
     lowmass_flux = np.load(file_path + 'lcb97_m13_reform.npy')# * 12
     WN_spec_params = np.load(file_path + 'WN_spec_params_cmfgen_Z001.npy')
@@ -309,20 +499,19 @@ if Z == 'Z0':
 if save_output == True:
     os.mkdir(SBmodel_name)
 
-#Choose between PoWR and WMbasic for OB high resolution UV spectral grid
-POWR = False #PoWR OB grid capability is not yet implemented so this should be False to use the WMbasic OB grid
-if POWR == True:
-    hires_wave_grid = np.linspace(920, 3100, 10000)
-    empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
-if POWR == False:
-    hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
-    empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+# #Choose between PoWR and WMbasic for OB high resolution UV spectral grid
+# POWR = False #PoWR OB grid capability is not yet implemented so this should be False to use the WMbasic OB grid
+# if POWR == True:
+#     hires_wave_grid = np.linspace(920, 3100, 10000)
+#     empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
+# if POWR == False:
+#     hires_wave_grid = np.load(file_path + 'hires_wave_grid.npy')
+#     empty_hires_flux = np.full_like(hires_wave_grid, 0.0)
 
 times_spectra_start = 0.00e6 #yrs
-times_spectra_end = 50e6 #yrs
 time_step_spectra = 0.1e6 #yrs
 times_spectra = np.arange(times_spectra_start, times_spectra_end, time_step_spectra)
-times_steps = np.arange(0.00e6, 50e6, 0.1e6)
+times_steps = np.arange(0.00e6, times_spectra_end, 0.1e6)
 
 def calc_Nostars(IMF_masses, IMF_exponents, IMF_mass_limits):
     '''
@@ -585,6 +774,68 @@ WC_reformed_spec_grid, WC_spec_params_reform, WC_spec_params_teff= reform_spec_g
 WC_reformed_spec_grid_powr, WC_spec_params_reform_powr, WC_spec_params_teff_powr, WC_spec_params_radius_powr, WC_spec_params_length_powr= reform_spec_grid_powr(WC_spectra_powr, WC_spec_params_powr)
 WN_reformed_spec_grid_powr, WN_spec_params_reform_powr, WN_spec_params_teff_powr, WN_spec_params_radius_powr, WN_spec_params_length_powr= reform_spec_grid_powr(WN_spectra_powr, WN_spec_params_powr)
 
+# for i in range(len(reformed_spec_grid)):
+#     fig=plt.figure()
+#     plt.style.use('default')
+#     ax=fig.add_subplot(111)
+#     #ind_powr_plot = 11
+#     #test_spec = WC_reformed_spec_grid[ind_powr_plot]
+#     #test_flux = test_spec[:,1]
+#     #test_wave = test_spec[:,0]
+#     #ax.plot(test_wave, test_flux, label='PoWR WC spec Teff='+str(WC_spec_params_teff[ind_powr_plot]))
+#     #ax.plot(SB99_wave, 10**get_SB99_spec(1), label='SB99_t2Myr')
+#     #ax.plot(hires_wave_grid, hires_seds[0], label='t=10')
+#     #assigned_flux_scaled = assigned_spectrum[:,1] * * 1.0e20
+    
+#     #ax.plot(hires_wave_grid, hires_spec[2][:,1], label=(str(np.log10(hires_teffs[0])),str(hires_loggs[0])))
+#     #ax.plot(hires_wave_grid, hires_spec[260][:,1], label=(str(np.log10(hires_teffs[260])),str(hires_loggs[260])))
+#     ind_check = i
+    
+#     ax.plot(wave_grid, reformed_spec_grid[ind_check][:,1], label=str(spec_params[ind_check]))
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[20])+20.), label='t=20')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[50])+20.), label='t=50')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[100])+20.), label='t=100')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[250])+20.), label='t=250')
+#     plt.title('Hires ifa spectra', fontsize=12)
+#     plt.xlabel('Wave', fontsize=12)
+#     plt.ylabel('Flux', fontsize=12)
+#     plt.tight_layout()
+#     #plt.xlim(1.5,4.5)
+#     plt.xlim(0,1000)
+#     plt.legend()
+#     plt.show()
+    
+# for i in range(len(WN_reformed_spec_grid)):
+#     fig=plt.figure()
+#     plt.style.use('default')
+#     ax=fig.add_subplot(111)
+#     #ind_powr_plot = 11
+#     #test_spec = WC_reformed_spec_grid[ind_powr_plot]
+#     #test_flux = test_spec[:,1]
+#     #test_wave = test_spec[:,0]
+#     #ax.plot(test_wave, test_flux, label='PoWR WC spec Teff='+str(WC_spec_params_teff[ind_powr_plot]))
+#     #ax.plot(SB99_wave, 10**get_SB99_spec(1), label='SB99_t2Myr')
+#     #ax.plot(hires_wave_grid, hires_seds[0], label='t=10')
+#     #assigned_flux_scaled = assigned_spectrum[:,1] * * 1.0e20
+    
+#     #ax.plot(hires_wave_grid, hires_spec[2][:,1], label=(str(np.log10(hires_teffs[0])),str(hires_loggs[0])))
+#     #ax.plot(hires_wave_grid, hires_spec[260][:,1], label=(str(np.log10(hires_teffs[260])),str(hires_loggs[260])))
+#     ind_check = i
+    
+#     ax.plot(WN_reformed_spec_grid[ind_check][:,0], WN_reformed_spec_grid[ind_check][:,1], label=str(WN_spec_params_reform[ind_check]))
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[20])+20.), label='t=20')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[50])+20.), label='t=50')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[100])+20.), label='t=100')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[250])+20.), label='t=250')
+#     plt.title('Hires ifa spectra', fontsize=12)
+#     plt.xlabel('Wave', fontsize=12)
+#     plt.ylabel('Flux', fontsize=12)
+#     plt.tight_layout()
+#     #plt.xlim(1.5,4.5)
+#     plt.xlim(0,1000)
+#     plt.legend()
+#     plt.show()
+
 def integrate_spec_grid(reformed_spec_grid):
     integrated_spectra = []
     for i in range(len(reformed_spec_grid)):
@@ -607,6 +858,67 @@ WC_integrated_spectra = integrate_spec_grid(WC_reformed_spec_grid)
 WN_integrated_spectra_powr = integrate_spec_grid(WN_reformed_spec_grid_powr)
 WC_integrated_spectra_powr = integrate_spec_grid(WC_reformed_spec_grid_powr)
 
+if spectra_library == 'PoWR':
+    #using script read_powr_grid.py, all spectra have been resampled to a common wavelength grid defined below
+    hires_spec_array = np.transpose(hires_spec_reformed) #each spectrum is a column
+    hires_spec1 = []
+    hires_cont = [] #hires_spec_norm this is really instead of cont
+    for i in range(len(hires_spec_reformed)):
+        hires_spectrum = np.column_stack((hires_wave_grid, hires_spec_reformed[i]))
+        hires_spec1.append(hires_spectrum)
+        
+        hires_spectrum_norm = np.column_stack((hires_wave_grid, hires_spec_norm[i]))
+        hires_cont.append(hires_spectrum_norm)
+        
+        hires_spec = []
+        for i in range(len(hires_spec1)):
+            if i < 300.0:
+                hires_flux = hires_spec1[i][:,1]*(((3.0856e9)**2.0)/((hires_radii[i]*6.96e10)**2.0))*1e20
+            else:
+                hires_flux = hires_spec1[i][:,1]
+            hires_spectrum = np.column_stack((hires_wave_grid, hires_flux))
+            hires_spec.append(hires_spectrum)
+        hires_int_spec = integrate_spec_grid(hires_spec)
+
+    lowmass_hires_teffs = lowmass_hires_params[:,0]
+    lowmass_hires_loggs = lowmass_hires_params[:,1]
+    lowmass_hires_spec = []
+    lowmass_hires_cont = []
+    for i in range(len(lowmass_hires_flux)):
+        resampled_lowmass_hires_flux = np.interp(hires_wave_grid, lowmass_hires_wave_grid, lowmass_hires_flux[i])
+        resampled_lowmass_cont_flux = np.interp(hires_wave_grid, lowmass_hires_wave_grid, lowmass_hires_cont_flux[i])
+        lowmass_hires_spectrum = np.column_stack((hires_wave_grid, resampled_lowmass_hires_flux))
+        lowmass_hires_continuum = np.column_stack((hires_wave_grid, resampled_lowmass_cont_flux))
+        lowmass_hires_spec.append(lowmass_hires_spectrum)
+        lowmass_hires_cont.append(lowmass_hires_continuum)
+    lowmass_hires_int_spec = integrate_spec_grid(lowmass_hires_spec)
+    
+elif spectra_library == 'WM':
+    hires_teffs = hires_params[:,0]
+    hires_loggs = hires_params[:,1]
+    hires_spec = []
+    hires_cont = []
+    for i in range(len(hires_flux)):
+        hires_spectrum = np.column_stack((hires_wave_grid, hires_flux[i]))
+        hires_continuum = np.column_stack((hires_wave_grid, hires_cont_flux[i]))
+        hires_spec.append(hires_spectrum)
+        hires_cont.append(hires_continuum)
+    hires_int_spec = integrate_spec_grid(hires_spec)
+    
+    lowmass_hires_teffs = lowmass_hires_params[:,0]
+    lowmass_hires_loggs = lowmass_hires_params[:,1]
+    lowmass_hires_spec = []
+    lowmass_hires_cont = []
+    for i in range(len(lowmass_hires_flux)):
+        resampled_lowmass_hires_flux = np.interp(hires_wave_grid, lowmass_hires_wave_grid, lowmass_hires_flux[i])
+        resampled_lowmass_cont_flux = np.interp(hires_wave_grid, lowmass_hires_wave_grid, lowmass_hires_cont_flux[i])
+        lowmass_hires_spectrum = np.column_stack((hires_wave_grid, resampled_lowmass_hires_flux))
+        lowmass_hires_continuum = np.column_stack((hires_wave_grid, resampled_lowmass_cont_flux))
+        lowmass_hires_spec.append(lowmass_hires_spectrum)
+        lowmass_hires_cont.append(lowmass_hires_continuum)
+    lowmass_hires_int_spec = integrate_spec_grid(lowmass_hires_spec)
+    
+    
 def interpolate_param(tracks_parameter, track_masses, run_speed_mode):
     '''
     Performs an interpolation between two adjacent tracks in evolutionary diagrams. This is done to create synthetic
@@ -638,10 +950,17 @@ def interpolate_param(tracks_parameter, track_masses, run_speed_mode):
             inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 ) * 1
             
         if run_speed_mode == 'HIGH_RES':
-            if round(initial_mass_upper) > 7 and round(initial_mass_upper) < 35:
-                inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 ) * 100
-            else:
-                inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 ) * 50
+            if round(initial_mass_upper) > 9 and round(initial_mass_upper) < 15:
+                inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 ) * 15
+            elif round(initial_mass_upper) > 15 and round(initial_mass_upper) < 35:
+                inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 ) * 5
+            elif round(initial_mass_upper) < 9:
+                inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 ) * 10
+            elif round(initial_mass_upper) > 35 and round(initial_mass_upper) < 60:
+                inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 ) * 5
+            elif round(initial_mass_upper) > 60:
+                inter_track_sampling = ( initial_mass_upper - initial_mass_lower +1 )
+
             
         track_masses_adjinterp = np.column_stack((track_mass_lower, track_mass_upper))
         track_param_adjinterp = np.column_stack((track_param_lower, track_param_upper))
@@ -854,6 +1173,7 @@ def get_timestep_params(timestep, timestep_mass_ind):
     timestep_cnr = timestep_12C_abundances_final / timestep_14N_abundances_final
     timestep_coher=((timestep_12C_abundances_final/12.)+(timestep_16O_abundances_final/16.))/(timestep_He_abundances_final/4.)
 
+    timestep_uncorr_teff_final = timestep_teffs_calc
 
     #Turn off for plotting isochrones
 
@@ -872,7 +1192,8 @@ def get_timestep_params(timestep, timestep_mass_ind):
     timestep_temps_final = np.array(timestep_temps_final)
     #timestep_temps_final[ind_SN_stars] = 0.0
 
-    return(timestep_ages_final,timestep_temps_final,timestep_lums_final,timestep_masses_final,timestep_H_abundances_final, timestep_loggs_final, timestep_mass_loss_rates_final, timestep_12C_abundances_final, timestep_14N_abundances_final, timestep_16O_abundances_final, timestep_masses, timestep_cnr, timestep_coher)
+
+    return(timestep_ages_final,timestep_temps_final,timestep_lums_final,timestep_masses_final,timestep_H_abundances_final, timestep_loggs_final, timestep_mass_loss_rates_final, timestep_12C_abundances_final, timestep_14N_abundances_final, timestep_16O_abundances_final, timestep_masses, timestep_cnr, timestep_coher, timestep_uncorr_teff_final)
 
 def get_specsyn_params(timestep_temps_final, timestep_masses_final, timestep_lums_final):
 
@@ -913,43 +1234,6 @@ for i in range(len(lowmass_flux)):
     lm_spectrum = np.column_stack((lowmass_wave_grid, lowmass_flux[i]))
     lowmass_spec.append(lm_spectrum)
 lowmass_int_spec = integrate_spec_grid(lowmass_spec)
-
-if POWR == True:
-    #using script read_powr_grid.py, all spectra have been resampled to a common wavelength grid defined below
-    # hires_teffs = np.genfromtxt('/Users/chawcroft/Downloads/griddl-ob-i-line_calib_uv/hires_teffs.txt')
-    # hires_loggs = np.genfromtxt('/Users/chawcroft/Downloads/griddl-ob-i-line_calib_uv/hires_loggs.txt')
-    # hires_spec_reformed = np.genfromtxt('/Users/chawcroft/Downloads/griddl-ob-i-line_calib_uv/ob_grid.txt') #each spectrum is a row
-    # hires_teffs = np.genfromtxt('/Users/chawcroft/Downloads/griddl-lmc-ob-i-line_calib/hires_teffs.txt')
-    # hires_loggs = np.genfromtxt('/Users/chawcroft/Downloads/griddl-lmc-ob-i-line_calib/hires_loggs.txt')
-    #hires_spec_reformed = np.genfromtxt('/Users/chawcroft/Downloads/griddl-lmc-ob-i-line_calib/ob_grid.txt') #each spectrum is a row
-    hires_teffs = np.genfromtxt('/Users/chawcroft/Downloads/griddl-smc-ob-ii-line_calib/hires_teffs.txt')
-    hires_loggs = np.genfromtxt('/Users/chawcroft/Downloads/griddl-smc-ob-ii-line_calib/hires_loggs.txt')
-    hires_spec_reformed = np.genfromtxt('/Users/chawcroft/Downloads/griddl-smc-ob-ii-line_calib/ob_grid.txt') #each spectrum is a row
-    # hires_teffs = np.genfromtxt('/Users/chawcroft/Downloads/powr_izw18/hires_teffs.txt')
-    # hires_loggs = np.genfromtxt('/Users/chawcroft/Downloads/powr_izw18/hires_loggs.txt')
-    # hires_spec_reformed = np.genfromtxt('/Users/chawcroft/Downloads/powr_izw18/ob_grid.txt') #each spectrum is a row
-    # hires_teffs = np.genfromtxt('/Users/chawcroft/Downloads/izw18_new/hires_teffs.txt')
-    # hires_loggs = np.genfromtxt('/Users/chawcroft/Downloads/izw18_new/hires_loggs.txt')
-    # hires_spec_reformed = np.genfromtxt('/Users/chawcroft/Downloads/izw18_new/ob_grid.txt') #each spectrum is a row
-    hires_spec_array = np.transpose(hires_spec_reformed) #each spectrum is a column
-    hires_spec = []
-    for i in range(len(hires_spec_reformed)):
-        hires_spectrum = np.column_stack((hires_wave_grid, hires_spec_reformed[i]))
-        hires_spec.append(hires_spectrum)
-    hires_cont = hires_spec
-    hires_int_spec = integrate_spec_grid_powr(hires_wave_grid, hires_spec_reformed)
-
-elif POWR == False:
-    hires_teffs = hires_params[:,0]
-    hires_loggs = hires_params[:,1]
-    hires_spec = []
-    hires_cont = []
-    for i in range(len(hires_flux)):
-        hires_spectrum = np.column_stack((hires_wave_grid, hires_flux[i]))
-        hires_continuum = np.column_stack((hires_wave_grid, hires_cont_flux[i]))
-        hires_spec.append(hires_spectrum)
-        hires_cont.append(hires_continuum)
-    hires_int_spec = integrate_spec_grid(hires_spec)
 
 WN_spec_params_logl = np.full_like(WN_spec_params_teff, 1.)
 WC_spec_params_logl = np.full_like(WC_spec_params_teff, 1.)
@@ -1036,7 +1320,7 @@ def assign_spectra_to_grid_WR(timestep_temps_final,spec_params_reform, spec_para
         elif timestep_temps_final[j] < 3.65 and initial_masses[j] > minimum_wr_mass:
             population_choice.append(No_stars[j])
 
-        elif timestep_teffs_final[j] > 20000. and specsyn_loggs[j] > 2.2 and specsyn_loggs[j] < specsyn_cotests[j]:
+        elif timestep_teffs_final[j] > 25000.:# and specsyn_loggs[j] > 2.2 and specsyn_loggs[j] < specsyn_cotests[j]:
 
             population_choice.append('OB')
             for i in range(len(spec_params_reform)):
@@ -1055,6 +1339,12 @@ def assign_spectra_to_grid_WR(timestep_temps_final,spec_params_reform, spec_para
             assigned_spec_logg.append(near_spec_logg)
             assigned_spectra.append(reformed_spec_grid[nearest_spec_ind])
             assigned_integrated_spectra.append(integrated_spectra[nearest_spec_ind])
+            
+        elif timestep_teffs_final[j] < 2000.:
+            population_choice.append('nope')
+            assigned_spec_teff.append(0.0)
+            assigned_spectra.append(np.column_stack((wave_grid, empty_flux)))
+            assigned_integrated_spectra.append(1e-30)
         else:
             population_choice.append('lowmass')
             for i in range(len(lowmass_params)):
@@ -1145,7 +1435,9 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
                 assigned_integrated_spectra.append(WN_integrated_spectra_powr[nearest_spec_ind])
                 spec_cont = planck(hires_wave_grid, near_spec_temp)
                 cont_flux_scaled = spec_cont[:,1] * assigned_flux_resampled[4050] / spec_cont[:,1][4050]
-                assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
+                #assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
+                assigned_cont.append(np.column_stack((hires_wave_grid, empty_hires_flux)))
+
             elif timestep_coher[j] < 0.5:
                 hires_choice.append('WCL')
                 for i in range(len(WC_spec_params_reform_powr)):
@@ -1163,7 +1455,9 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
                 assigned_integrated_spectra.append(WN_integrated_spectra_powr[nearest_spec_ind])
                 spec_cont = planck(hires_wave_grid, near_spec_temp)
                 cont_flux_scaled = spec_cont[:,1] * assigned_flux_resampled[4050] / spec_cont[:,1][4050]
-                assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
+                #assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
+                assigned_cont.append(np.column_stack((hires_wave_grid, empty_hires_flux)))
+
             elif timestep_coher[j] < 1.:
                 hires_choice.append('WCE')
                 for i in range(len(WC_spec_params_reform_powr)):
@@ -1181,7 +1475,9 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
                 assigned_integrated_spectra.append(WN_integrated_spectra_powr[nearest_spec_ind])
                 spec_cont = planck(hires_wave_grid, near_spec_temp)
                 cont_flux_scaled = spec_cont[:,1] * assigned_flux_resampled[4050] / spec_cont[:,1][4050]
-                assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
+                #assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
+                assigned_cont.append(np.column_stack((hires_wave_grid, empty_hires_flux)))
+
             elif timestep_coher[j] >= 1.:
                 hires_choice.append('WO')
                 for i in range(len(WC_spec_params_reform_powr)):
@@ -1199,7 +1495,9 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
                 assigned_integrated_spectra.append(WN_integrated_spectra_powr[nearest_spec_ind])
                 spec_cont = planck(hires_wave_grid, near_spec_temp)
                 cont_flux_scaled = spec_cont[:,1] * assigned_flux_resampled[4050] / spec_cont[:,1][4050]
-                assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
+                #assigned_cont.append(np.column_stack((hires_wave_grid, cont_flux_scaled)))
+                assigned_cont.append(np.column_stack((hires_wave_grid, empty_hires_flux)))
+
                 
         #elif initial_masses[j] < 5. or timestep_teffs_final[j] < 2000:
         elif timestep_teffs_final[j] < 2000:
@@ -1225,32 +1523,39 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
                 
         elif initial_masses[j] > 10. and timestep_teffs_final[j] < 22000:
             hires_choice.append('kurucz')
-            for i in range(len(lowmass_params)):
+            for i in range(len(lowmass_hires_params)):
                 #distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2 + (lowmass_loggs[i] - timestep_loggs_final[j])**2)
-                distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2)
+                distance_to_spec.append((lowmass_hires_teffs[i] - 10**timestep_temps_final[j])**2)
             nearest_spec_ind = np.argmin(distance_to_spec)
-            near_spec_temp = lowmass_teffs[nearest_spec_ind]
+            near_spec_temp = lowmass_hires_teffs[nearest_spec_ind]
             assigned_spec_logg.append(1.0)
             assigned_spec_teff.append(near_spec_temp)
-            assigned_spectrum = lowmass_spec[nearest_spec_ind]
-            assigned_flux_resampled = np.interp(hires_wave_grid, assigned_spectrum[:,0], assigned_spectrum[:,1])
-            assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
-            assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
-            assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            assigned_spectrum = lowmass_hires_spec[nearest_spec_ind]
+            #assigned_flux_resampled = np.interp(hires_wave_grid, assigned_spectrum[:,0], assigned_spectrum[:,1])
+            assigned_spectra.append(assigned_spectrum)
+            assigned_integrated_spectra.append(lowmass_hires_int_spec[nearest_spec_ind])
+            #assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            #assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
+            #assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            assigned_cont.append(lowmass_hires_cont[nearest_spec_ind])
 
         elif initial_masses[j] < 5. or initial_masses[j] > 5. and timestep_teffs_final[j] < 17000:
             hires_choice.append('kurucz2')
-            for i in range(len(lowmass_params)):
+            for i in range(len(lowmass_hires_params)):
                 #distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2 + (lowmass_loggs[i] - timestep_loggs_final[j])**2)
-                distance_to_spec.append((lowmass_teffs[i] - 10**timestep_temps_final[j])**2)
+                distance_to_spec.append((lowmass_hires_teffs[i] - 10**timestep_temps_final[j])**2)
             nearest_spec_ind = np.argmin(distance_to_spec)
-            near_spec_temp = lowmass_teffs[nearest_spec_ind]
+            near_spec_temp = lowmass_hires_teffs[nearest_spec_ind]
+            assigned_spec_logg.append(1.0)
             assigned_spec_teff.append(near_spec_temp)
-            assigned_spectrum = lowmass_spec[nearest_spec_ind]
-            assigned_flux_resampled = np.interp(hires_wave_grid, assigned_spectrum[:,0], assigned_spectrum[:,1])
-            assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
-            assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
-            assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            assigned_spectrum = lowmass_hires_spec[nearest_spec_ind]
+            #assigned_flux_resampled = np.interp(hires_wave_grid, assigned_spectrum[:,0], assigned_spectrum[:,1])
+            assigned_spectra.append(assigned_spectrum)
+            #assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            #assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
+            assigned_integrated_spectra.append(lowmass_hires_int_spec[nearest_spec_ind])
+            #assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            assigned_cont.append(lowmass_hires_cont[nearest_spec_ind])
 
         else:
             if spectra_library == 'FW':# and timestep_teffs_final[j] > 17600:
@@ -1275,7 +1580,7 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
                 #assigned_integrated_spectra.append(hires_int_spec[nearest_spec_ind])
                 
             if spectra_library == 'WM':# and timestep_teffs_final[j] > 17600:
-                hires_choice.append('OB')
+                hires_choice.append('OB - WM')
                 for i in range(len(hires_teffs)):
                     #distance_to_spec.append(abs(hires_teffs[i] - 10**timestep_temps_final[j]) + abs(hires_loggs[i] - specsyn_loggs[j]))
                     distance_to_spec.append((timestep_temps_final[j] - np.log10(hires_teffs[i]))**2 + 5*(hires_loggs[i] - specsyn_loggs[j])**2)
@@ -1290,7 +1595,7 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
                 assigned_integrated_spectra.append(hires_int_spec[nearest_spec_ind])
 
             if spectra_library == 'PoWR':
-                hires_choice.append('OB')
+                hires_choice.append('OB - PoWR')
                 for i in range(len(hires_teffs)):
                     #distance_to_spec.append(abs(hires_teffs[i] - 10**timestep_temps_final[j]) + abs(hires_loggs[i] - specsyn_loggs[j]))
                     #distance_to_spec.append(abs(hires_teffs[i] - 10**timestep_temps_final[j]) + abs(hires_loggs[i] - specsyn_loggs[j]))
@@ -1334,12 +1639,28 @@ def specsyn(assigned_integrated_spectra, specsyn_bbfluxes, assigned_spectra, rad
         assigned_flux_scaled.append(assigned_flux_scaled_i)
         #assigned_flux_scaled_test.append(assigned_flux_scaled_testi)
 
+        # fig=plt.figure()
+        # plt.style.use('default')
+        # ax=fig.add_subplot(111)
+        # ax.plot(np.log10(wave_grid), np.log10(assigned_flux_scaled_i))
+        # #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[20])+20.), label='t=20')
+        # #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[50])+20.), label='t=50')
+        # #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[100])+20.), label='t=100')
+        # #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[250])+20.), label='t=250')
+        # plt.title('Hires ifa spectra', fontsize=12)
+        # plt.xlabel('Wave', fontsize=12)
+        # plt.ylabel('Flux', fontsize=12)
+        # plt.tight_layout()
+        # plt.xlim(1.5,4.5)
+        # plt.legend()
+        # plt.show()
 
     assigned_flux_scaled = np.array(assigned_flux_scaled)
     population_flux = assigned_flux_scaled.sum(axis=0)
     return(population_flux, assigned_flux_scaled_test)
 
-def specsyn_hires(assigned_integrated_spectra, specsyn_bbfluxes, assigned_spectra, assigned_cont, radii, No_stars, population_nebular):
+def specsyn_hires(assigned_integrated_spectra, specsyn_bbfluxes, assigned_spectra, assigned_cont, radii, No_stars, population_nebular, assigned_hires_choice):
+
     assigned_flux = []
     assigned_cont_flux = []
 
@@ -1357,22 +1678,54 @@ def specsyn_hires(assigned_integrated_spectra, specsyn_bbfluxes, assigned_spectr
         #assigned_flux.append(assigned_f)
         assigned_flux.append(renormed_flux)
         assigned_cont_flux.append(assigned_c)
+        
+    if spectra_library == 'PoWR':
+        assigned_flux_scaled = []
+        assigned_cont_scaled = []
+        assigned_flux_norm = []
+        for i in range(len(assigned_flux)):
+            assigned_flux_scaled_i = 12.566 * radii[i]**2 /1e20 * assigned_flux[i] * No_stars[i]# * 3.14 * 4 * 5# /1e20
+            assigned_flux_scaled.append(assigned_flux_scaled_i)
+            
+            if assigned_hires_choice[i] == 'OB - PoWR':
+                assigned_norm_flux_powr = assigned_cont_flux[i]
+                assigned_flux_norm.append(assigned_norm_flux_powr)
+            elif assigned_hires_choice[i] != 'OB - PoWR':
+                assigned_cont_scaled_i = 12.566 * radii[i]**2 /1e20 * assigned_cont_flux[i] * No_stars[i]# * 3.14 * 4 * 5# /1e20
+                assigned_cont_scaled.append(assigned_cont_scaled_i)
+                assigned_norm_flux_not_powr = assigned_flux_scaled_i / (assigned_cont_scaled_i+1.0e-35)
+                #assigned_flux_norm.append(assigned_norm_flux_not_powr)
+            
+        for i in range(len(assigned_flux)):
+            assigned_cont_scaled_i = assigned_cont_flux[i]# * No_stars[i]# * 3.14 * 4 * 5# /1e20
+            assigned_cont_scaled.append(assigned_cont_scaled_i)
 
-    assigned_flux_scaled = []
-    assigned_cont_scaled = []
-    for i in range(len(assigned_flux)):
-        assigned_flux_scaled_i = 12.566 * radii[i]**2 /1e20 * assigned_flux[i] * No_stars[i]# * 3.14 * 4 * 5# /1e20
-        assigned_cont_scaled_i = 12.566 * radii[i]**2 /1e20 * assigned_cont_flux[i] * No_stars[i]# * 3.14 * 4 * 5# /1e20
-        assigned_flux_scaled.append(assigned_flux_scaled_i)
-        assigned_cont_scaled.append(assigned_cont_scaled_i)
+        assigned_flux_scaled = np.array(assigned_flux_scaled)
+        assigned_cont_scaled = np.array(assigned_cont_scaled)
+        assigned_flux_norm = np.array(assigned_flux_norm)
+        population_flux = assigned_flux_scaled.sum(axis=0)
+        population_cont = assigned_cont_scaled.sum(axis=0)
+        population_flux_norm = assigned_flux_norm.mean(axis=0)
 
-    assigned_flux_scaled = np.array(assigned_flux_scaled)
-    assigned_cont_scaled = np.array(assigned_cont_scaled)
-    population_flux = assigned_flux_scaled.sum(axis=0)
-    population_cont = assigned_cont_scaled.sum(axis=0)
-    population_flux_norm = population_flux / (population_cont+1.0e-35)
-
-    population_flux = np.add(population_flux, population_nebular_resampled)
+        population_flux = np.add(population_flux, population_nebular_resampled)
+        
+        
+    else:
+        assigned_flux_scaled = []
+        assigned_cont_scaled = []
+        for i in range(len(assigned_flux)):
+            assigned_flux_scaled_i = 12.566 * radii[i]**2 /1e20 * assigned_flux[i] * No_stars[i]# * 3.14 * 4 * 5# /1e20
+            assigned_cont_scaled_i = 12.566 * radii[i]**2 /1e20 * assigned_cont_flux[i] * No_stars[i]# * 3.14 * 4 * 5# /1e20
+            assigned_flux_scaled.append(assigned_flux_scaled_i)
+            assigned_cont_scaled.append(assigned_cont_scaled_i)
+    
+        assigned_flux_scaled = np.array(assigned_flux_scaled)
+        assigned_cont_scaled = np.array(assigned_cont_scaled)
+        population_flux = assigned_flux_scaled.sum(axis=0)
+        population_cont = assigned_cont_scaled.sum(axis=0)
+        population_flux_norm = population_flux / (population_cont+1.0e-35)
+    
+        population_flux = np.add(population_flux, population_nebular_resampled)
 
     return(population_flux, population_flux_norm, population_nebular_resampled)
 
@@ -1862,6 +2215,7 @@ population_masses = []
 population_masses_test = []
 population_temps = []
 population_teffs = []
+population_uncorr_teffs = []
 population_radii = []
 population_lums = []
 population_cotests = []
@@ -1923,13 +2277,29 @@ population_Ha_luminosity = []
 population_Ha_continuum_flux = []
 for i in range(len(times_steps)):
     timestep_ex = times_steps[i]
-    timestep_ages_final,timestep_temps_final,timestep_lums_final,timestep_masses_final,timestep_H_abundances_final, timestep_loggs_final, timestep_mass_loss_rates_final, timestep_12C_abundances_final, timestep_14N_abundances_final, timestep_16O_abundances_final, timestep_mass_test, timestep_cnr, timestep_coher = get_timestep_params(timestep_ex, timestep_mass_ind)
+    timestep_ages_final,timestep_temps_final,timestep_lums_final,timestep_masses_final,timestep_H_abundances_final, timestep_loggs_final, timestep_mass_loss_rates_final, timestep_12C_abundances_final, timestep_14N_abundances_final, timestep_16O_abundances_final, timestep_mass_test, timestep_cnr, timestep_coher, timestep_uncorr_teffs = get_timestep_params(timestep_ex, timestep_mass_ind)
 
     if i == 0:
-        initial_masses = timestep_masses_final
-        No_stars, c_masses, dens, xmhigh, xmlow = calc_Nostars(timestep_masses_final, IMF_exponents, IMF_mass_limits) #second print
-        No_stars_flipped = np.flip(No_stars)
+        if input_imf_option == True:
+            initial_masses = timestep_masses_final
+            No_stars, c_masses, dens, xmhigh, xmlow = calc_Nostars(timestep_masses_final, IMF_exponents, IMF_mass_limits) #second print
+            
+            stochastic_imf = np.load(stochastic_imf_file)
+            # Array to store counts
+            No_stars_stochastic = np.zeros(len(xmlow), dtype=int)
 
+            # Count values in each bin
+            for i in range(len(xmlow)):
+                No_stars_stochastic[i] = np.sum((stochastic_imf >= xmlow[i]) & (stochastic_imf < xmhigh[i]))
+            No_stars_stochastic_flipped = np.flip(No_stars_stochastic)
+            
+            No_stars = No_stars_stochastic
+        
+        if input_imf_option == False:
+            initial_masses = timestep_masses_final
+            No_stars, c_masses, dens, xmhigh, xmlow = calc_Nostars(timestep_masses_final, IMF_exponents, IMF_mass_limits) #second print
+            No_stars_flipped = np.flip(No_stars)
+        
     timestep_teffs_final = 10**timestep_temps_final
     timestep_radii_final = compute_radii(timestep_temps_final,timestep_lums_final)
     specsyn_teffs, specsyn_loggs, specsyn_radii, specsyn_cotests, specsyn_bbfluxes = get_specsyn_params(timestep_temps_final, timestep_masses_final, timestep_lums_final)
@@ -1974,26 +2344,24 @@ for i in range(len(times_steps)):
     population_absVmag.append(timestep_absVmag)
     population_Ha_luminosity.append(timestep_Ha_luminosity)
     population_Ha_continuum_flux.append(timestep_Ha_continuum_flux)
-
-    if POWR == False:
-        hires_assigned_integrated_spectra,hires_assigned_spec_teff,hires_assigned_spec_logg,hires_assigned_spectra,hires_assigned_cont, hires_choice = assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs, timestep_lums_final, timestep_H_abundances_final, timestep_masses_final, initial_masses, specsyn_cotests, specsyn_loggs)
-        hires_population_flux, hires_population_flux_norm, hires_population_nebular = specsyn_hires(assigned_integrated_spectra, specsyn_bbfluxes, hires_assigned_spectra, hires_assigned_cont, specsyn_radii, No_stars, population_continuum)
+        
+    if spectra_library == 'WM':
+        hires_assigned_integrated_spectra,hires_assigned_spec_teff,hires_assigned_spec_logg,hires_assigned_spectra,hires_assigned_cont, assigned_hires_choice = assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs, timestep_lums_final, timestep_H_abundances_final, timestep_masses_final, initial_masses, specsyn_cotests, specsyn_loggs)
+        hires_population_flux, hires_population_flux_norm, hires_population_nebular = specsyn_hires(assigned_integrated_spectra, specsyn_bbfluxes, hires_assigned_spectra, hires_assigned_cont, specsyn_radii, No_stars, population_continuum, assigned_hires_choice)
         population_hires_flux_iterations.append(hires_population_flux)
         population_hires_flux_norm_iterations.append(hires_population_flux_norm)
         population_hires_assigned_spec_teff.append(hires_assigned_spec_teff)
-        population_hires_choice.append(hires_choice)
+        population_hires_choice.append(assigned_hires_choice)
         population_hires_nebular_iterations.append(hires_population_nebular)
 
-    elif POWR == True:
-        hires_assigned_integrated_spectra,hires_assigned_spec_teff,hires_assigned_spec_logg,hires_assigned_spectra,hires_assigned_cont, hires_choice = assign_spectra_to_grid_hires(timestep_temps_final,hires_params, hires_teffs, hires_loggs, timestep_lums_final, timestep_H_abundances_final, timestep_masses_final, initial_masses, specsyn_cotests, specsyn_loggs)
-        #hires_population_flux = specsyn_hires_powr(specsyn_bbfluxes, hires_assigned_spectra, specsyn_radii, No_stars)
-        hires_population_flux, hires_population_flux_norm, hires_population_nebular = specsyn_hires(hires_assigned_integrated_spectra, specsyn_bbfluxes, hires_assigned_spectra, hires_assigned_cont, specsyn_radii, No_stars, population_continuum)
+    elif spectra_library == 'PoWR':
+        hires_assigned_integrated_spectra,hires_assigned_spec_teff,hires_assigned_spec_logg,hires_assigned_spectra,hires_assigned_cont, assigned_hires_choice = assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs, timestep_lums_final, timestep_H_abundances_final, timestep_masses_final, initial_masses, specsyn_cotests, specsyn_loggs)
+        hires_population_flux, hires_population_flux_norm, hires_population_nebular = specsyn_hires(assigned_integrated_spectra, specsyn_bbfluxes, hires_assigned_spectra, hires_assigned_cont, specsyn_radii, No_stars, population_continuum, assigned_hires_choice)
         population_hires_flux_iterations.append(hires_population_flux)
+        population_hires_flux_norm_iterations.append(hires_population_flux_norm)
         population_hires_assigned_spec_teff.append(hires_assigned_spec_teff)
         population_hires_assigned_spec_logg.append(hires_assigned_spec_logg)
-        population_hires_choice.append(hires_choice)
-        if i == 20:
-            population_hires_assigned_spectra.append(hires_assigned_spectra)
+        population_hires_choice.append(assigned_hires_choice)
 
 
     if plot_SN_rate == True:
@@ -2021,6 +2389,7 @@ for i in range(len(times_steps)):
     population_12C_abundances.append(timestep_12C_abundances_final)
     population_14N_abundances.append(timestep_14N_abundances_final)
     population_16O_abundances.append(timestep_16O_abundances_final)
+    population_uncorr_teffs.append(timestep_uncorr_teffs)
     population_vinfs.append(timestep_vinfs)
     population_vescs.append(timestep_vescs)
     population_windmoms.append(timestep_windmoms)
@@ -2123,27 +2492,72 @@ else:
 
 if plot_isochrones == True:
     
+    
+    def get_SB99_iso(file_iso):
+        isochrone = np.genfromtxt(file_iso)#, skip_header=10)
+        
+        isotemp = isochrone[:,2]
+        isoteff = 10**isotemp
+        isologL = isochrone[:,8]
+                
+        return(isoteff,isologL)
+
+    isoteff50, isologL50 = get_SB99_iso('isotst_50Myr.txt')
+    isoteff40, isologL40 = get_SB99_iso('isotst_40Myr.txt')
+    isoteff30, isologL30 = get_SB99_iso('isotst_30Myr.txt')
+    isoteff20, isologL20 = get_SB99_iso('isotst_20Myr.txt')
+    isoteff4, isologL4 = get_SB99_iso('isotst_4Myr.txt')
+    
+    def get_GENEC_iso(file_iso):
+        isochrone = np.genfromtxt('isochronesZ014/'+file_iso)#, skip_header=10)
+        
+        isotemp = isochrone[:,5]
+        isoteff = 10**isotemp
+        isologL = isochrone[:,4]
+                
+        return(isoteff,isologL)
+
+    isoteff50, isologL50 = get_SB99_iso('isotst_50Myr.txt')
+    isoteff40, isologL40 = get_SB99_iso('isotst_40Myr.txt')
+    isoteff30, isologL30 = get_SB99_iso('isotst_30Myr.txt')
+    isoteff20, isologL20 = get_SB99_iso('isotst_20Myr.txt')
+    
+    isoteffG40, isologLG40 = get_GENEC_iso('Isochr_Z0.014_Vini0.00_t07.600.dat')
+    isoteffG30, isologLG30 = get_GENEC_iso('Isochr_Z0.014_Vini0.00_t07.500.dat')
+    isoteffG20, isologLG20 = get_GENEC_iso('Isochr_Z0.014_Vini0.00_t07.300.dat')
+    
+    # WR_correction_factor = 0.6
+    # for i in range(len(timestep_masses_final)):
+    #     if timestep_H_abundances_final[i] < 0.1:# and timestep_temps_final[i] > 4.4:
+    #         timestep_core_teff_final = 10**timestep_core_temps_final[i]
+    #         corrected_teff=timestep_core_teff_final+(WR_correction_factor-1.0)*(timestep_core_teff_final-timestep_teffs_calc[i])
+    
     Hmin=0.0
     Hmax=1.0
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    sc1 = ax.scatter(population_teffs[10]/1000, population_lums[10], s=1, c=population_H_abundances[10], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    #ax.scatter(isoteff50/1000, isologL50, label='STARBURST99', color='k', s=6)
+    #ax.scatter(isoteff40/1000, isologL40, color='k', s=6)
+    #ax.scatter(isoteff30/1000, isologL30, color='k', s=6)
+    #ax.scatter(isoteff20/1000, isologL20, color='k', s=6)
+    ax.scatter(isoteff4/1000, isologL4, color='k', s=6)
+    #sc1 = ax.scatter(population_teffs[10]/1000, population_lums[10], s=1, c=population_H_abundances[10], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
     # ax.scatter(population_teffs[20]/1000, population_lums[20], label='pySB 2Myr', s=1)
     # ax.scatter(population_teffs[30]/1000, population_lums[30], label='pySB 3Myr',  s=1)
-    sc1 = ax.scatter(population_teffs[30]/1000, population_lums[30], s=1, c=population_H_abundances[30], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
-    sc = ax.scatter(population_teffs[200]/1000, population_lums[200], s=1, c=population_H_abundances[200], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
-    sc = ax.scatter(population_teffs[300]/1000, population_lums[300], s=1, c=population_H_abundances[300], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
-    sc = ax.scatter(population_teffs[400]/1000, population_lums[400], s=1, c=population_H_abundances[400], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    sc = ax.scatter(population_uncorr_teffs[40]/1000, population_lums[40], s=1, c=population_H_abundances[200], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    #sc = ax.scatter(population_teffs[300]/1000, population_lums[300], s=1, c=population_H_abundances[300], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
+    #sc = ax.scatter(population_teffs[400]/1000, population_lums[400], s=1, c=population_H_abundances[400], cmap='plasma_r', vmin=Hmin, vmax=Hmax)
     #ax.scatter(population_teffs[50]/1000, population_lums[50], label='pySB 5Myr',  s=1)
+    #ax.scatter(isoteffG20/1000, isologLG20, color='r', s=6)
     ax.set_title('Isochrones for Z=0.014 without rotation', fontsize=15)
     plt.xlabel('$T_\mathrm{eff}$ [kK]', fontsize=15)
     plt.ylabel('log($L)\, [L_{\odot}$]', fontsize=15)
     #plt.ylim(0,7)
     #ax.text(67, 6.2, '1 Myr', fontsize=12, color="#1155cc")
     #ax.text(40, 5.6, '3.1 Myr', fontsize=12, color="#1155cc")
-    plt.ylim(2.5,4.5)
-    plt.xlim(14,25)
+    plt.ylim(2.5,6.0)
+    plt.xlim(0,80)
     ax.invert_xaxis()
     ax.tick_params(labelsize=15)
     fig.colorbar(sc, label='H abundance')
@@ -2152,23 +2566,127 @@ if plot_isochrones == True:
     plt.legend(fontsize=12)
     plt.show()
     
+    def plot_grid_tracks(track_xparam, track_yparam, grid_xparam_adjinterp_total, grid_yparam_adjinterp_total, title, xlabel, ylabel, length, flipx):
+        '''
+        Plots the results of the interpolation function, typically the scatter points are the original tracks and the lines plotted
+        are the result of the interpolation. The length variable is the number of grid values which are excluded from the plot.
+        For example length=0 means all grid tracks will be plotted, but lower masses are cut off by increasing length.
+        '''
+        fig=plt.figure()
+        plt.style.use('default')
+        ax=fig.add_subplot(111)
+        #ax.scatter(times_steps, timestep_visual, label='timesteps')
+        ax.scatter(0,0,label='tracks')
+        ax.plot(0,0,label='interpolated grid')
+        for i,j in zip(track_xparam,track_yparam):
+            ax.plot(10**i[:-2]/1000, j[:-2])
+        #for i in range(len(grid_xparam_adjinterp_total)-length):
+        #    ax.plot(grid_xparam_adjinterp_total[i], grid_yparam_adjinterp_total[i])
+            
+        #ax.plot(grid_xparam_adjinterp_total[2], grid_yparam_adjinterp_total[2])
+        plt.title(title)
+        ax.scatter(isoteff4/1000, isologL4, color='b', s=6)
+        ax.scatter(population_uncorr_teffs[40]/1000, population_lums[40], s=6, color='r')
+        #ax.scatter(isoteffG20/1000, isologLG20, color='r', s=6)
+
+        if flipx == 'yes':
+            ax.invert_xaxis()
+        plt.ylabel(ylabel, fontsize=12)
+        plt.xlabel(xlabel, fontsize=12)
+        plt.xlim(120, 10)
+        plt.ylim(4.5, 6.5)
+        plt.tight_layout()
+        plt.legend()
+        plt.show()
+        return
+    plot_grid_tracks(track_temps[5:10], track_lums[5:10], grid_temps_adjinterp_total, grid_lums_adjinterp_total, 'Temperature and Luminosity tracks',  'Teff [K]', 'Luminosity [Lsol]', 22, 'yes')
+    #plot_grid_tracks(track_temps[16:22], track_lums[16:22], grid_temps_adjinterp_total, grid_lums_adjinterp_total, 'Temperature and Luminosity tracks',  'Teff [K]', 'Luminosity [Lsol]', 22, 'yes')
+
+    
 if plot_SED_with_time == True:
+    
+    SB99model_name = 'Z002_V00_sampling' #  Z020_V00_sampling Z014_V40_sampling Z14_V00_sampling   Z006_V00_sampling Z014_V00_sampling_24mod_WM
+
+    SBspectrum_name = 'spectrum'
+    SBfile_spectrum = SB99model_name+'/'+SB99model_name+'.'+SBspectrum_name
+    SBspectrum = np.genfromtxt(SBfile_spectrum, skip_header=6)
+    SBtime = SBspectrum[:,0]
+    SBtimes = np.unique(SBtime)
+    
+    def get_SB99_spec(SB99timestep):
+        SBtime_val = SBtimes[int(SB99timestep)]
+        SBind_timestep = [i for i in range(len(SBtime)) if SBtime[i] < SBtime_val+10 and SBtime[i] > SBtime_val-10]
+        SBspectrum_step = SBspectrum[SBind_timestep]
+        SB99_logL = SBspectrum_step[:,3]
+        
+        return(SB99_logL)
+    
+    def read_pySB99_model(model_dir):
+        
+        inputs_file = 'input.txt'
+        txt_file_HI = 'ion_flux_HI.txt'
+        txt_file_HeI = 'ion_flux_HeI.txt'
+        txt_file_HeII = 'ion_flux_HeII.txt'
+        Lbol_file = 'bololum.txt'
+        uvslope_file = 'uv_slope.txt'
+        Ha_file = 'Haew.txt'
+        windmom_file = 'windmom.txt'
+        windpower_file = 'windpower.txt'
+        #Mv_file = 'Mv.txt'
+        SED_file = 'pySB_SED_stellar.npy'
+        SED_file_neb = 'pySB_SED_stellar_and_nebular.npy'
+        SED_wave_file = 'SED_wavelength.txt'
+        SED_times_file = 'SED_times.txt'
+        spectrum_file = 'pySB_hires_spectrum.npy'
+        spectrum_norm_file = 'pySB_hires_norm_spectrum.npy'
+        spectrum_wave_file = 'spectrum_wavelength.txt'
+        
+        ion_flux_HI = np.genfromtxt(model_dir + '/' + txt_file_HI)
+        ion_flux_HeI = np.genfromtxt(model_dir + '/' + txt_file_HeI)
+        ion_flux_HeII = np.genfromtxt(model_dir + '/' + txt_file_HeII)
+        Lbol = np.genfromtxt(model_dir + '/' + Lbol_file)
+        uvslope = np.genfromtxt(model_dir + '/' + uvslope_file)
+        Ha_ew = np.genfromtxt(model_dir + '/' + Ha_file)
+        windmom = np.genfromtxt(model_dir + '/' + windmom_file)
+        windpower = np.genfromtxt(model_dir + '/' + windpower_file)
+        SED = np.load(model_dir + '/' + SED_file)
+        SED_neb = np.load(model_dir + '/' + SED_file_neb)
+        SED_wavelength = np.genfromtxt(model_dir + '/' + SED_wave_file)
+        SED_times = np.genfromtxt(model_dir + '/' + SED_times_file)
+        spectrum = np.load(model_dir + '/' + spectrum_file)
+        spectrum_norm = np.load(model_dir + '/' + spectrum_norm_file)
+        spectrum_wavelength = np.genfromtxt(model_dir + '/' + spectrum_wave_file)
+        
+        return(ion_flux_HI, ion_flux_HeI, ion_flux_HeII, Lbol, uvslope, Ha_ew, windmom, windpower, SED, SED_wavelength, SED_times, SED_neb, spectrum, spectrum_norm, spectrum_wavelength)
+
+    pySB_model_name = 'pySB_highres_outputs_Feb13/Z014_V00_M120_highres_feb13'
+    
+    ion_flux_HI, MWC_ion_flux_HeI, MWC_ion_flux_HeII, MWC_Lbol, MWC_uvslope, MWC_Ha, MWC_windmom, MWC_windpower, SED, SED_wavelength, SED_times, SED_neb, spectrum, spectrum_norm, spectrum_wavelength = read_pySB99_model(pySB_model_name)
+    
+    spec_time = 4
     
     SED_plot_choice_flux = np.log10(10**(np.log10(population_flux_iterations[int(spec_time*10)])+20.))
     SED_plot_total_choice_flux = np.log10(10**(np.log10(population_flux_total_iterations[int(spec_time*10)])+20.))
 
-    fig=plt.figure(figsize=(8,12), dpi=300)
+    #fig=plt.figure(figsize=(8,12), dpi=300)
+    fig=plt.figure(figsize=(8,6), dpi=300)
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(wave_grid, SED_plot_total_choice_flux, label=str(spec_time)+'Myr')
+    #ax.plot(np.log10(SED_wavelength), SED[100,:]-0.4, label='MW SED - '+str(SED_times[100]/ 10**6)+'Myrs', color='#674ea7')
+    #ax.plot(np.log10(wave_grid), get_SB99_spec(spec_time*2), color='tab:blue', label='SB99', linewidth=3) #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
+    #ax.plot(np.log10(wave_grid), SED_plot_total_choice_flux, label=str(spec_time)+'Myr'+'w/ neb', color='red')
+    #ax.plot(np.log10(wave_grid), SED_plot_choice_flux, label=str(spec_time)+'Myr', color='k')
+    ax.plot(wave_grid, 10**get_SB99_spec(8), color='tab:blue', label='SB99') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
+    ax.plot(wave_grid, 10**SED_plot_total_choice_flux, label=str(spec_time)+'Myr', color='red')
     plt.xlabel('Wavelength [$\AA$]', fontsize=20)
     plt.ylabel('log (Luminosity [$erg s^{-1} \AA^{-1}$])', fontsize=20)
     ax.legend(loc="best",fontsize=18)
     ax.tick_params(labelsize=20)
     plt.tight_layout()
-    plt.xlim(200 , 2000)
+    plt.xlim(200 , 3000)
+    #plt.xlim(1.5 , 4.5)
     offset_text = ax.get_yaxis().get_offset_text()
-    plt.ylim(36,40)
+    #plt.ylim(34,40)
     plt.show()
     
     if save_output == True:
