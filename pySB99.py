@@ -27,7 +27,13 @@ if input_option == 'INPUT_FILE':
 
 elif input_option == 'MAIN_CODE':
     '''SFR is no longer an input option and instead will be applied through a SFR light-ratio weighting method post-processing, which is still in progress'''
-    M_total = 1.0e6 #Msol
+    star_formation_option = 'CSF' #options are ISF for instantaneous burst of star formation, CSF for continuous star formation. If ISF input a total mass of burst. If CSF input star formation rate in solar masses per year.
+    
+    if star_formation_option == 'ISF':
+        M_total = 1.0e6 #Msol
+        
+    if star_formation_option == 'CSF':
+        SFR = 1.0 #Msol / yr
     
     IMF_exponents = [1.3, 2.3]
     IMF_mass_limits = 0.1, 0.5, 120.
@@ -35,7 +41,7 @@ elif input_option == 'MAIN_CODE':
     output_age = 2.0
     
     #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
-    run_speed_mode = 'DEFAULT' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
+    run_speed_mode = 'FAST' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have high resolution interpolation in mass)
     
     Z = 'MW' #Z options are MWC, MW, LMC, SMC, IZw18, XMP and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004, 0.00001 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
     SED_library = 'FW' #options are FW, WM and PoWR which refer to the Fastwind, WMbasic and PoWR OB low resolution spectral libraries
@@ -71,7 +77,7 @@ elif input_option == 'MAIN_CODE':
         maximum_SN_mass = 120. #maximum stellar initial mass (in Msol) that is accounted for as going supernova
     
     if save_output == True:
-        SBmodel_name = 'pysb_testmodJul29' #set the output folder name here!
+        SBmodel_name = 'pysb_testmodJul30' #set the output folder name here!
         
     if spectra_library == 'PoWR':
         mass_loss_rate_option = 'DEFAULT' #Mdot options are DEFAULT (Vd3), HIGH, MODERATE and LOW. Default has only be implemented for now, also not all options will be available for all metallicities
@@ -511,7 +517,11 @@ if save_output == True:
 times_spectra_start = 0.00e6 #yrs
 time_step_spectra = 0.1e6 #yrs
 times_spectra = np.arange(times_spectra_start, times_spectra_end, time_step_spectra)
-times_steps = np.arange(0.00e6, times_spectra_end, 0.1e6)
+time_step_length = 0.1e6
+times_steps = np.arange(0.00e6, times_spectra_end, time_step_length)
+
+if star_formation_option == 'CSF':
+    M_total = time_step_length * SFR
 
 def calc_Nostars(IMF_masses, IMF_exponents, IMF_mass_limits):
     '''
@@ -2008,7 +2018,7 @@ def calc_wind(timestep_temps, timestep_lums, timestep_masses, timestep_mdot, tim
     wpower_xshootu = np.log10(wind_power_xshootu_sum +1e-30) + 35.
 
 
-    return(vinfs_Z, wind_power_calc, wpower, wind_mom_calc, wmom, wmom_vink, vinf_vink21, mdot_vink00, timestep_vesc, wmom_leuven, wmom_xshootu, wpower_xshootu)
+    return(vinfs_Z, wind_power_sum, wpower, wind_mom_sum, wmom, wmom_vink, vinf_vink21, mdot_vink00, timestep_vesc, wmom_leuven, wmom_xshootu, wpower_xshootu)
 
 def get_uv_slope(uv_wave, uv_flux):
     '''Input wave and flux in log'''
@@ -2153,21 +2163,31 @@ def get_SN_rate(population_SN_ind):
             counter = 0
         
     #For each mass index that goes SN in a given timestep, divide the total number of stars by the time since the last set of SN to get the rate
-    population_SN_rate = []  
+    population_SN_rate = [] 
+    population_SN_rate_csf = []
     for i in range(len(population_new_SN_mass_inds)):
         pop_SN_calc = population_new_SN_mass_inds[i]
     
         SN_rate_step = []
+        SN_rate_step_csf = []
         for j in pop_SN_calc:
             SN_rate_mass = No_stars[j] / ( 1e5 * (ind_SN_times[i] + 1))
+            SN_rate_mass_csf = No_stars[j] / ( 1e5 )
+
             
             SN_rate_step.append(SN_rate_mass)
+            SN_rate_step_csf.append(SN_rate_mass_csf)
         SN_rate_step_sum = np.sum(SN_rate_step)
+        SN_rate_step_sum_csf = np.sum(SN_rate_step_csf)
         population_SN_rate.append(SN_rate_step_sum)
+        population_SN_rate_csf.append(SN_rate_step_sum_csf)
         
     population_SN_rate = np.array(population_SN_rate) + 1.0e-30
     population_SN_rate_log = np.log10(population_SN_rate)
-    return(population_SN_rate_log)
+    population_SN_rate_csf = np.array(population_SN_rate_csf) + 1.0e-30
+    population_SN_rate_log_csf = np.log10(population_SN_rate_csf)
+
+    return(population_SN_rate_log, population_SN_rate_log_csf)
 
 def compute_radii(temps, lums):
 #    4 pi R^2 sigma T^4
@@ -2433,7 +2453,7 @@ for i in range(len(times_steps)):
         population_SN_ind.append(ind_SN_masses)
     
 if plot_SN_rate == True:
-    SN_rates = get_SN_rate(population_SN_ind)
+    SN_rates, SN_rates_csf_calc = get_SN_rate(population_SN_ind)
 
 et = time.time()
 elapsed_time = et - st
@@ -2624,21 +2644,21 @@ if plot_isochrones == True:
     
 if plot_SED_with_time == True:
     
-    SB99model_name = 'Z014_V00_sampling' # Z002_V00_sampling  Z020_V00_sampling Z014_V40_sampling   Z014_V00_sampling_24mod_WM Z006_V00_sampling 
+    # SB99model_name = 'Z014_V00_CSF' #  Z002_V00_sampling Z014_V00_sampling Z020_V00_sampling Z014_V40_sampling   Z014_V00_sampling_24mod_WM Z006_V00_sampling 
 
-    SBspectrum_name = 'spectrum'
-    SBfile_spectrum = SB99model_name+'/'+SB99model_name+'.'+SBspectrum_name
-    SBspectrum = np.genfromtxt(SBfile_spectrum, skip_header=6)
-    SBtime = SBspectrum[:,0]
-    SBtimes = np.unique(SBtime)
+    # SBspectrum_name = 'spectrum'
+    # SBfile_spectrum = SB99model_name+'/'+SB99model_name+'.'+SBspectrum_name
+    # SBspectrum = np.genfromtxt(SBfile_spectrum, skip_header=6)
+    # SBtime = SBspectrum[:,0]
+    # SBtimes = np.unique(SBtime)
     
-    def get_SB99_spec(SB99timestep):
-        SBtime_val = SBtimes[int(SB99timestep)]
-        SBind_timestep = [i for i in range(len(SBtime)) if SBtime[i] < SBtime_val+10 and SBtime[i] > SBtime_val-10]
-        SBspectrum_step = SBspectrum[SBind_timestep]
-        SB99_logL = SBspectrum_step[:,3]
+    # def get_SB99_spec(SB99timestep):
+    #     SBtime_val = SBtimes[int(SB99timestep)]
+    #     SBind_timestep = [i for i in range(len(SBtime)) if SBtime[i] < SBtime_val+10 and SBtime[i] > SBtime_val-10]
+    #     SBspectrum_step = SBspectrum[SBind_timestep]
+    #     SB99_logL = SBspectrum_step[:,3]
         
-        return(SB99_logL)
+    #     return(SB99_logL)
     
     def read_pySB99_model(model_dir):
         
@@ -2682,21 +2702,31 @@ if plot_SED_with_time == True:
     
     ion_flux_HI, MWC_ion_flux_HeI, MWC_ion_flux_HeII, MWC_Lbol, MWC_uvslope, MWC_Ha, MWC_windmom, MWC_windpower, SED, SED_wavelength, SED_times, SED_neb, spectrum, spectrum_norm, spectrum_wavelength = read_pySB99_model(pySB_model_name)
     
-    #spec_time = 2
+    #spec_time = 10
     
-    SED_plot_choice_flux = population_flux_iterations_send[int(spec_time*10)]
-    SED_plot_total_choice_flux = population_flux_total_iterations_send[int(spec_time*10)]
-
+    if star_formation_option == 'ISF':
+        SED_plot_choice_flux = population_flux_iterations_send[int(spec_time*10)]
+        SED_plot_total_choice_flux = population_flux_total_iterations_send[int(spec_time*10)]
+        
+    if star_formation_option == 'CSF':
+        csf_population_flux = np.cumsum(population_flux_iterations, axis=0)
+        csf_population_flux_send = np.log10(csf_population_flux)+20.
+        
+        csf_population_flux_total = np.cumsum(population_flux_total_iterations, axis=0)
+        csf_population_flux_total_send = np.log10(csf_population_flux_total)+20.
+        
+        csf_SED_plot_choice_flux = csf_population_flux_send[int(spec_time*10)]
+        csf_SED_plot_total_choice_flux = csf_population_flux_total_send[int(spec_time*10)]
+    
     #fig=plt.figure(figsize=(8,12), dpi=300)
     fig=plt.figure(figsize=(8,6), dpi=300)
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(SED_wavelength, 10**SED_neb[spec_time*10,:], label='MW SED - '+str(SED_times[100]/ 10**6)+'Myrs', color='#674ea7')
-    #ax.plot(np.log10(wave_grid), get_SB99_spec(spec_time*2), color='tab:blue', label='SB99', linewidth=3) #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
-    #ax.plot(np.log10(wave_grid), SED_plot_total_choice_flux, label=str(spec_time)+'Myr'+'w/ neb', color='red')
-    #ax.plot(np.log10(wave_grid), SED_plot_choice_flux, label=str(spec_time)+'Myr', color='k')
-    #ax.plot(wave_grid, 10**get_SB99_spec(spec_time*2), color='tab:blue', label='SB99') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
-    ax.plot(wave_grid, 10**SED_plot_total_choice_flux, label=str(spec_time)+'Myr', color='red')
+    #ax.plot(wave_grid, 10**get_SB99_spec(int(spec_time*2)), color='tab:blue', label='SB99 - '+str(SBtimes[int(spec_time*2)]/10**6)+'Myr') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
+    if star_formation_option == 'ISF':
+        ax.plot(wave_grid, 10**SED_plot_total_choice_flux, label=str(spec_time)+'Myr', color='red')
+    if star_formation_option == 'CSF':
+        ax.plot(wave_grid, 10**csf_SED_plot_choice_flux, label=str(spec_time)+'Myr', color='red')
     plt.xlabel('Wavelength [$\AA$]', fontsize=20)
     plt.ylabel('log (Luminosity [$erg s^{-1} \AA^{-1}$])', fontsize=20)
     ax.legend(loc="best",fontsize=18)
@@ -2708,57 +2738,106 @@ if plot_SED_with_time == True:
     #plt.ylim(34,40)
     plt.show()
     
+    # #fig=plt.figure(figsize=(8,12), dpi=300)
+    # fig=plt.figure(figsize=(8,6), dpi=300)
+    # plt.style.use('default')
+    # ax=fig.add_subplot(111)
+    # ax.plot(SED_wavelength, 10**SED_neb[spec_time*10,:], label='MW SED - '+str(SED_times[100]/ 10**6)+'Myrs', color='#674ea7')
+    # #ax.plot(np.log10(wave_grid), get_SB99_spec(spec_time*2), color='tab:blue', label='SB99', linewidth=3) #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
+    # #ax.plot(np.log10(wave_grid), SED_plot_total_choice_flux, label=str(spec_time)+'Myr'+'w/ neb', color='red')
+    # #ax.plot(np.log10(wave_grid), SED_plot_choice_flux, label=str(spec_time)+'Myr', color='k')
+    # #ax.plot(wave_grid, 10**get_SB99_spec(spec_time*2), color='tab:blue', label='SB99') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
+    # ax.plot(wave_grid, 10**SED_plot_total_choice_flux, label=str(spec_time)+'Myr', color='red')
+    # plt.xlabel('Wavelength [$\AA$]', fontsize=20)
+    # plt.ylabel('log (Luminosity [$erg s^{-1} \AA^{-1}$])', fontsize=20)
+    # ax.legend(loc="best",fontsize=18)
+    # ax.tick_params(labelsize=20)
+    # plt.tight_layout()
+    # plt.xlim(200 , 3000)
+    # #plt.xlim(1.5 , 4.5)
+    # offset_text = ax.get_yaxis().get_offset_text()
+    # #plt.ylim(34,40)
+    # plt.show()
+    
     if save_output == True:
         ind_spectra_output = np.where(np.isin(times_steps, times_spectra))[0]
-        population_flux_iterations_send_save = population_flux_iterations_send
-        #population_flux_iterations_send_save = np.array(population_flux_iterations_send)[ind_spectra_output]
-        population_flux_total_iterations_send_save = np.array(population_flux_total_iterations_send)[ind_spectra_output]
-        np.save(SBmodel_name + '/pySB_SED_stellar.npy', np.array(population_flux_iterations_send_save))
-        np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
-        np.savetxt(SBmodel_name + '/pySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
-        np.savetxt(SBmodel_name + '/pySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
-        np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
-        np.savetxt(SBmodel_name + '/SED_times.txt', times_spectra)
+
+        if star_formation_option == 'ISF':
+            #population_flux_iterations_send_save = population_flux_iterations_send
+            population_flux_iterations_send_save = np.array(population_flux_iterations_send)[ind_spectra_output]
+            population_flux_total_iterations_send_save = np.array(population_flux_total_iterations_send)[ind_spectra_output]
+            np.save(SBmodel_name + '/pySB_SED_stellar.npy', np.array(population_flux_iterations_send_save))
+            np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', population_flux_total_iterations_send_save)
+            np.savetxt(SBmodel_name + '/pySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_choice_flux)))
+            np.savetxt(SBmodel_name + '/pySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, SED_plot_total_choice_flux)))
+            np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
+            np.savetxt(SBmodel_name + '/SED_times.txt', times_spectra)
+            
+        if star_formation_option == 'CSF':
+            csf_population_flux_iterations_send_save = np.array(csf_population_flux_send)[ind_spectra_output]
+            csf_population_flux_total_iterations_send_save = np.array(csf_population_flux_total_send)[ind_spectra_output]
+            np.save(SBmodel_name + '/pySB_SED_stellar.npy', np.array(csf_population_flux_iterations_send_save))
+            np.save(SBmodel_name + '/pySB_SED_stellar_and_nebular.npy', csf_population_flux_total_iterations_send_save)
+            np.savetxt(SBmodel_name + '/pySB_SED_stellar'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, csf_SED_plot_choice_flux)))
+            np.savetxt(SBmodel_name + '/pySB_SED_stellar_and_nebular'+str(int(spec_time))+'_Myr.txt', np.column_stack((spectrum_wave, csf_SED_plot_total_choice_flux)))
+            np.savetxt(SBmodel_name + '/SED_wavelength.txt', spectrum_wave)
+            np.savetxt(SBmodel_name + '/SED_times.txt', times_spectra)
                 
 if plot_hires_spectra == True:
     
-    SBhires_name = 'ifaspec'
-    SBhires_spectrum = SB99model_name+'/'+SB99model_name+'.'+SBhires_name
-    SBhiresspectrum = np.genfromtxt(SBhires_spectrum, skip_header=6)
-    SBhirestime = SBhiresspectrum[:,0]
-    SBhirestimes = np.unique(SBhirestime)
-    hires_wave_grid_SB99 = np.genfromtxt('ifa_line_wave_grid.txt')
+    # SBhires_name = 'ifaspec'
+    # SBhires_spectrum = SB99model_name+'/'+SB99model_name+'.'+SBhires_name
+    # SBhiresspectrum = np.genfromtxt(SBhires_spectrum, skip_header=6)
+    # SBhirestime = SBhiresspectrum[:,0]
+    # SBhirestimes = np.unique(SBhirestime)
+    # hires_wave_grid_SB99 = np.genfromtxt('ifa_line_wave_grid.txt')
     
-    def get_SB99_hires_spec(SB99timestep, option):
-        SBhirestime_val = SBhirestimes[int(SB99timestep)]
-        print(SBhirestime_val)
-        SBhiresind_timestep = [i for i in range(len(SBhirestime)) if SBhirestime[i] < SBhirestime_val+10 and SBhirestime[i] > SBhirestime_val-10]
-        SBhiresspectrum_step = SBhiresspectrum[SBhiresind_timestep]
-        SB99_hireslogL = SBhiresspectrum_step[:,2]
-        SB99_hiresnorm = SBhiresspectrum_step[:,3]
+    # def get_SB99_hires_spec(SB99timestep, option):
+    #     SBhirestime_val = SBhirestimes[int(SB99timestep)]
+    #     print(SBhirestime_val)
+    #     SBhiresind_timestep = [i for i in range(len(SBhirestime)) if SBhirestime[i] < SBhirestime_val+10 and SBhirestime[i] > SBhirestime_val-10]
+    #     SBhiresspectrum_step = SBhiresspectrum[SBhiresind_timestep]
+    #     SB99_hireslogL = SBhiresspectrum_step[:,2]
+    #     SB99_hiresnorm = SBhiresspectrum_step[:,3]
     
-        if option == 'norm':
-            return_arr = SB99_hiresnorm
-        else:
-            return_arr = SB99_hireslogL
+    #     if option == 'norm':
+    #         return_arr = SB99_hiresnorm
+    #     else:
+    #         return_arr = SB99_hireslogL
             
-        return(return_arr)
+    #     return(return_arr)
     
-    #spec_time = 40
+    #hires_spec_time = 40    
     
-    hires_plot_choice_flux = population_hires_flux_iterations_send[int(hires_spec_time*10)]
-    hires_plot_choice_flux_wneb = population_hires_flux_wneb_iterations_send[int(hires_spec_time*10)]
-    hires_plot_choice_flux_norm = population_hires_flux_norm_iterations[int(hires_spec_time*10)]
+    if star_formation_option == 'ISF':
+        hires_plot_choice_flux = population_hires_flux_iterations_send[int(hires_spec_time*10)]
+        hires_plot_choice_flux_wneb = population_hires_flux_wneb_iterations_send[int(hires_spec_time*10)]
+        hires_plot_choice_flux_norm = population_hires_flux_norm_iterations[int(hires_spec_time*10)]
+
+        
+    if star_formation_option == 'CSF':
+        csf_hires_population_flux = np.cumsum(population_hires_flux_iterations, axis=0)
+        csf_hires_population_flux_send = np.log10(csf_hires_population_flux)+20.
+        
+        csf_population_flux_wneb_total = np.cumsum(population_hires_flux_wneb_iterations, axis=0)
+        csf_population_flux_wneb_total_send = np.log10(csf_population_flux_wneb_total)+20.
+        
+        csf_hires_population_flux_norm = np.cumsum(population_hires_flux_norm_iterations, axis=0)
+
+        csf_hires_plot_choice_flux = csf_hires_population_flux_send[int(hires_spec_time*10)]
+        csf_hires_plot_wneb_choice_flux = csf_population_flux_wneb_total_send[int(hires_spec_time*10)]
+        csf_hires_plot_choice_flux_norm = csf_hires_population_flux_norm[int(hires_spec_time*10)]
     
     
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    #ax.plot(hires_wave_grid, 10**hires_plot_choice_flux_wneb, label='pySB t='+str(spec_time)+'Myr', color='tab:blue')
-    ax.plot(hires_wave_grid, 10**spectrum[hires_spec_time*10,:], label='pySB t='+str(hires_spec_time)+'Myr', color='tab:green')
-
+    if star_formation_option == 'ISF':
+        ax.plot(hires_wave_grid, 10**hires_plot_choice_flux_wneb, label='pySB t='+str(hires_spec_time)+'Myr', color='tab:red')
+    if star_formation_option == 'CSF':
+        ax.plot(hires_wave_grid, 10**csf_hires_plot_wneb_choice_flux, label=str(hires_spec_time)+'Myr', color='red')
     #ax.plot(hires_wave_grid, hires_plot_choice_flux, label='pySB t='+str(spec_time)+'Myr', color='tab:red')
-    #ax.plot(hires_wave_grid, 10**get_SB99_hires_spec(spec_time*2, 'notnorm'), color='tab:red', label='SB99') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
+    #ax.plot(hires_wave_grid, 10**get_SB99_hires_spec(hires_spec_time*2, 'notnorm'), color='tab:blue', label='SB99') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
     ax.set_title('Hires ifa spectra', fontsize=12)
     plt.xlabel('Wave', fontsize=12)
     plt.ylabel('Flux', fontsize=12)
@@ -2770,7 +2849,10 @@ if plot_hires_spectra == True:
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(hires_wave_grid, hires_plot_choice_flux_norm, label='pySB t='+str(hires_spec_time)+'Myr', color='tab:red')
+    if star_formation_option == 'ISF':
+        ax.plot(hires_wave_grid, hires_plot_choice_flux_norm, label='pySB t='+str(hires_spec_time)+'Myr', color='tab:red')
+    if star_formation_option == 'CSF':
+        ax.plot(hires_wave_grid, csf_hires_plot_choice_flux_norm, label='pySB t='+str(hires_spec_time)+'Myr', color='tab:red')
     ax.set_title('Hires ifa spectra', fontsize=12)
     plt.xlim(900,2000)
     plt.xlabel('Wave', fontsize=12)
@@ -2781,24 +2863,70 @@ if plot_hires_spectra == True:
         
     if save_output == True:
         ind_hires_spectra_output = np.where(np.isin(times_steps, times_spectra))[0]
-        hires_flux_iterations_send_save = np.array(population_hires_flux_iterations_send)[ind_hires_spectra_output]
-        hires_flux_wneb_iterations_send_save = np.array(population_hires_flux_wneb_iterations_send)[ind_hires_spectra_output]
-        hires_flux_norm_iterations_send_save = np.array(population_hires_flux_norm_iterations)[ind_hires_spectra_output]
-
-        np.save(SBmodel_name + '/pySB_hires_spectrum.npy', hires_flux_wneb_iterations_send_save)
-        np.save(SBmodel_name + '/pySB_hires_spectrum_without_neb.npy', hires_flux_iterations_send_save)
-        np.save(SBmodel_name + '/pySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
-        np.savetxt(SBmodel_name + '/pySB_spectrum_'+str(int(hires_spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
-        np.savetxt(SBmodel_name + '/pySB_norm_spectrum_'+str(int(hires_spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
-        np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
-        np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+        
+        if star_formation_option == 'ISF':
+            hires_flux_iterations_send_save = np.array(csf_hires_population_flux_send)[ind_hires_spectra_output]
+            hires_flux_wneb_iterations_send_save = np.array(population_hires_flux_wneb_iterations_send)[ind_hires_spectra_output]
+            hires_flux_norm_iterations_send_save = np.array(population_hires_flux_norm_iterations)[ind_hires_spectra_output]
+    
+            np.save(SBmodel_name + '/pySB_hires_spectrum.npy', hires_flux_wneb_iterations_send_save)
+            np.save(SBmodel_name + '/pySB_hires_spectrum_without_neb.npy', hires_flux_iterations_send_save)
+            np.save(SBmodel_name + '/pySB_hires_norm_spectrum.npy', hires_flux_norm_iterations_send_save)
+            np.savetxt(SBmodel_name + '/pySB_spectrum_'+str(int(hires_spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_wneb)))
+            np.savetxt(SBmodel_name + '/pySB_without_neb_spectrum_'+str(int(hires_spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux)))
+            np.savetxt(SBmodel_name + '/pySB_norm_spectrum_'+str(int(hires_spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, hires_plot_choice_flux_norm)))
+            np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
+            np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
+            
+        if star_formation_option == 'CSF':
+            csf_hires_flux_iterations_send_save = np.array(population_hires_flux_iterations_send)[ind_hires_spectra_output]
+            csf_hires_flux_wneb_iterations_send_save = np.array(csf_population_flux_wneb_total_send)[ind_hires_spectra_output]
+            csf_hires_flux_norm_iterations_send_save = np.array(csf_hires_population_flux_norm)[ind_hires_spectra_output]
+    
+            np.save(SBmodel_name + '/pySB_hires_spectrum.npy', csf_hires_flux_wneb_iterations_send_save)
+            np.save(SBmodel_name + '/pySB_hires_spectrum_without_neb.npy', csf_hires_flux_iterations_send_save)
+            np.save(SBmodel_name + '/pySB_hires_norm_spectrum.npy', csf_hires_flux_norm_iterations_send_save)
+            np.savetxt(SBmodel_name + '/pySB_spectrum_'+str(int(hires_spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, csf_hires_plot_wneb_choice_flux)))
+            np.savetxt(SBmodel_name + '/pySB_without_neb_spectrum_'+str(int(hires_spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, csf_hires_plot_choice_flux)))
+            np.savetxt(SBmodel_name + '/pySB_norm_spectrum_'+str(int(hires_spec_time))+'_Myr.txt', np.column_stack((hires_wave_grid, csf_hires_plot_choice_flux_norm)))
+            np.savetxt(SBmodel_name + '/spectrum_wavelength.txt', hires_wave_grid)
+            np.savetxt(SBmodel_name + '/times_spectra.txt', times_spectra)
 
 if plot_ion_flux == True:
+    
+    # quanta_SB99 = np.genfromtxt(SB99model_name+'/'+SB99model_name+'.quanta', skip_header=7)
+    # #quanta_SB99 = np.genfromtxt('testDec12.quanta', skip_header=7)
+    # times_SB99 = quanta_SB99[:,0]
+    # HI_ionflux_SB99 = quanta_SB99[:,1]
+    # HEI_ionflux_SB99 = quanta_SB99[:,3]
+    # HEII_ionflux_SB99 = quanta_SB99[:,5]
+    # Lbol_SB99 = quanta_SB99[:,7]
+    
+    if star_formation_option == 'CSF':
+        csf_HI_flux_calc = 10**(np.array(population_ion_HI_flux_iterations) - 20.)
+        csf_HI_flux_cumsum = np.cumsum(csf_HI_flux_calc)
+        csf_HI_flux = np.log10(csf_HI_flux_cumsum) +20.
+        
+        csf_HeI_flux_calc = 10**(np.array(population_ion_HEI_flux_iterations) - 20.)
+        csf_HeI_flux_cumsum = np.cumsum(csf_HeI_flux_calc)
+        csf_HeI_flux = np.log10(csf_HeI_flux_cumsum) +20.
+        
+        csf_HeII_flux_calc = 10**(np.array(population_ion_HEII_flux_iterations) - 20.)
+        csf_HeII_flux_cumsum = np.cumsum(csf_HeII_flux_calc)
+        csf_HeII_flux = np.log10(csf_HeII_flux_cumsum) +20.
+        
+        csf_Lbol_flux_calc = 10**(np.array(population_ion_L_flux_iterations) - 20.)
+        csf_Lbol_flux_cumsum = np.cumsum(csf_Lbol_flux_calc)
+        csf_Lbol_flux = np.log10(csf_Lbol_flux_cumsum) +20.
 
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(np.log10(times_steps), population_ion_HI_flux_iterations, label='pySB')
+    #ax.plot(np.log10(times_SB99), HI_ionflux_SB99, label='SB99')
+    if star_formation_option == 'ISF':
+        ax.plot(np.log10(times_steps), population_ion_HI_flux_iterations, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.plot(np.log10(times_steps), csf_HI_flux, label='pySB')
     plt.xlim(6.,8.)
     plt.ylim(44.,54.)
     plt.title('Ionising Flux HI over Time', fontsize=12)
@@ -2812,7 +2940,10 @@ if plot_ion_flux == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     times_steps_log = np.log10(times_steps)
-    ax.plot(np.log10(times_steps), population_ion_HEI_flux_iterations, label='pySB')
+    if star_formation_option == 'ISF':
+        ax.plot(np.log10(times_steps), population_ion_HEI_flux_iterations, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.plot(np.log10(times_steps), csf_HeI_flux, label='pySB')
     plt.xlim(6.,8.)
     plt.ylim(44.,54.)
     plt.title('Ionising Flux HeI over Time', fontsize=12)
@@ -2826,7 +2957,10 @@ if plot_ion_flux == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     times_steps_log = np.log10(times_steps)
-    ax.plot(np.log10(times_steps), population_ion_HEII_flux_iterations, label='pySB')
+    if star_formation_option == 'ISF':
+        ax.plot(np.log10(times_steps), population_ion_HEII_flux_iterations, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.plot(np.log10(times_steps), csf_HeII_flux, label='pySB')    
     plt.xlim(6.,8.)
     plt.ylim(38.,54.)
     plt.title('Ionising Flux HeII over Time', fontsize=12)
@@ -2839,7 +2973,11 @@ if plot_ion_flux == True:
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(np.log10(times_steps), population_ion_L_flux_iterations, label='pySB')
+    #ax.plot(np.log10(times_SB99), Lbol_SB99, label='SB99')
+    if star_formation_option == 'ISF':
+        ax.plot(np.log10(times_steps), population_ion_L_flux_iterations, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.plot(np.log10(times_steps), csf_Lbol_flux, label='pySB')  
     plt.xlim(6.,7.3)
     plt.title('Luminosity over Time', fontsize=12)
     plt.xlabel('Time', fontsize=12)
@@ -2849,18 +2987,44 @@ if plot_ion_flux == True:
     plt.show()
 
     if save_output == True:
-
-        np.savetxt(SBmodel_name + '/bololum.txt', population_ion_L_flux_iterations)
-        np.savetxt(SBmodel_name + '/ion_flux_HI.txt', population_ion_HI_flux_iterations)
-        np.savetxt(SBmodel_name + '/ion_flux_HeI.txt', population_ion_HEI_flux_iterations)
-        np.savetxt(SBmodel_name + '/ion_flux_HeII.txt', population_ion_HEII_flux_iterations)
+        if star_formation_option == 'ISF':
+            np.savetxt(SBmodel_name + '/bololum.txt', population_ion_L_flux_iterations)
+            np.savetxt(SBmodel_name + '/ion_flux_HI.txt', population_ion_HI_flux_iterations)
+            np.savetxt(SBmodel_name + '/ion_flux_HeI.txt', population_ion_HEI_flux_iterations)
+            np.savetxt(SBmodel_name + '/ion_flux_HeII.txt', population_ion_HEII_flux_iterations)
+        if star_formation_option == 'CSF':
+            np.savetxt(SBmodel_name + '/bololum.txt', csf_Lbol_flux)
+            np.savetxt(SBmodel_name + '/ion_flux_HI.txt', csf_HI_flux)
+            np.savetxt(SBmodel_name + '/ion_flux_HeI.txt', csf_HeI_flux)
+            np.savetxt(SBmodel_name + '/ion_flux_HeII.txt', csf_HeII_flux)
 
 if plot_wind == True:
+    
+    # def get_SB99_wind(SBmodel_name):
+    #     y_SB99 = np.genfromtxt(SBmodel_name+'/'+SBmodel_name+'.power', skip_header=7)
+    #     wind_times = y_SB99[:,0]
+    #     SB99_windpower = y_SB99[:,1]
+    #     SB99_energy = y_SB99[:,6]
+    #     SB99_windmom = y_SB99[:,7]
+    #     return(wind_times, SB99_windpower, SB99_energy, SB99_windmom)
+    
+    # SB99_windtimes, SB99_windpower, SB99_energy, SB99_windmom = get_SB99_wind(SB99model_name)
+    
+    if star_formation_option == 'CSF':
+        csf_windpower_calc = np.cumsum(population_windpowers_calc)
+        csf_windpower = np.log10(csf_windpower_calc) +35.
+        
+        csf_windmoms_calc = np.cumsum(population_windmoms_calc)
+        csf_windmoms = np.log10(csf_windmoms_calc) +35.
     
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(times_steps_log, population_windpowers, label='pySB')
+    #ax.plot(np.log10(SB99_windtimes), SB99_windpower, label='SB99')
+    if star_formation_option == 'ISF':
+        ax.plot(times_steps_log, population_windpowers, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.plot(times_steps_log, csf_windpower, label='pySB CSF')
     plt.xlim(6.,7.25)
     plt.ylim(34.,42.)
     plt.title('Wind Power over Time', fontsize=12)
@@ -2873,7 +3037,10 @@ if plot_wind == True:
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(times_steps_log, population_windmoms, label='pySB')
+    if star_formation_option == 'ISF':
+        ax.plot(times_steps_log, population_windmoms, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.plot(times_steps_log, csf_windmoms, label='pySB')
     #ax.plot(times_steps_log, population_windmoms_vink, label='vink')
     #ax.plot(times_steps_log, population_windmoms_leuven, label='leuven')
     #ax.plot(times_steps_log, population_windmoms_xshootu, label='xshootu')
@@ -2887,16 +3054,29 @@ if plot_wind == True:
     plt.show()
     
     if save_output == True:
-
-        np.savetxt(SBmodel_name + '/windpower.txt', population_windpowers)
-        np.savetxt(SBmodel_name + '/windmom.txt', population_windmoms)  
+    
+        if star_formation_option == 'ISF':
+            np.savetxt(SBmodel_name + '/windpower.txt', population_windpowers)
+            np.savetxt(SBmodel_name + '/windmom.txt', population_windmoms)  
+        if star_formation_option == 'CSF':
+            np.savetxt(SBmodel_name + '/windpower.txt', csf_windpower)
+            np.savetxt(SBmodel_name + '/windmom.txt', csf_windmoms) 
             
 if plot_uv_slope == True:   
+    
+    if star_formation_option == 'CSF':
+        csf_population_uv_slope_betas = []
+        for i in range(len(csf_population_flux_total)):
+            csf_timestep_uv_slope_x, csf_timestep_uv_slope_y, csf_timestep_uv_slope_beta = get_uv_slope(np.log10(wave_grid), np.log10(csf_population_flux_total[i, :])+20.)
+            csf_population_uv_slope_betas.append(csf_timestep_uv_slope_beta)
 
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(times_steps_log, population_uv_slopes_beta, label='pySB')
+    if star_formation_option == 'ISF':
+        ax.plot(times_steps_log, population_uv_slopes_beta, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.plot(times_steps_log, csf_population_uv_slope_betas, label='pySB')
     plt.xlim(6.,9.)
     plt.title('Beta slope over Time', fontsize=12)
     plt.xlabel('Time', fontsize=12)
@@ -2908,18 +3088,51 @@ if plot_uv_slope == True:
     
     if save_output == True:
         
-        np.savetxt(SBmodel_name + '/uv_slope.txt', population_uv_slopes_beta)
+        if star_formation_option == 'ISF':
+            np.savetxt(SBmodel_name + '/uv_slope.txt', population_uv_slopes_beta)
+        if star_formation_option == 'CSF':
+            np.savetxt(SBmodel_name + '/uv_slope.txt', csf_population_uv_slope_betas)
         
 if plot_ew == True:
     
+    # ews_SB99 = np.genfromtxt(SB99model_name+'/'+SB99model_name+'.ewidth', skip_header=7)
+    # times_SB99 = ews_SB99[:,0]
+    # Ha_ew_SB99 = ews_SB99[:,3]
+    # Hb_ew_SB99 = ews_SB99[:,6]
+    
+    if star_formation_option == 'CSF':
+        csf_Ha_EW_calc = 10**(np.array(population_Ha_ew))
+        csf_Ha_EW_cumsum = np.cumsum(csf_Ha_EW_calc)
+        csf_Ha_EW = np.log10(csf_Ha_EW_cumsum)
+        
+        csf_Ha_ews = []
+        csf_Hb_ews = []
+        csf_Pb_ews = []
+        csf_Bg_ews = []
+        csf_Ha_luminositys = []
+        csf_Ha_continuum_fluxs = []
+        for i in range(len(csf_HI_flux_cumsum)):
+            csf_Ha_ew, csf_Hb_ew, csf_Pb_ew, csf_Bg_ew, csf_Ha_luminosity, csf_Ha_continuum_flux = get_ew(wave_grid, csf_population_flux_total[i, :], csf_HI_flux[i])
+            csf_Ha_ews.append(csf_Ha_ew)
+            csf_Hb_ews.append(csf_Hb_ew)
+            csf_Pb_ews.append(csf_Pb_ew)
+            csf_Bg_ews.append(csf_Bg_ew)
+            csf_Ha_luminositys.append(csf_Ha_luminosity)
+            csf_Ha_continuum_fluxs.append(csf_Ha_continuum_flux)
+            
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(times_steps_log, population_Ha_ew, label='pySB Ha')
+    if star_formation_option == 'ISF':
+        ax.plot(times_steps_log, population_Ha_ew, label='pySB Ha')
+    if star_formation_option == 'CSF':
+        ax.plot(times_steps_log, csf_Ha_ews, label='pySB Ha')
+    #ax.plot(np.log10(times_SB99), Ha_ew_SB99, label='SB99 Ha')
     #ax.plot(times_steps_log, population_Hb_ew, label='pySB Hb')
     #ax.plot(times_steps_log, population_Pb_ew, label='pySB Pb')
     #ax.plot(times_steps_log, population_Bg_ew, label='pySB Bg')
     plt.xlim(6.,8.)
+    #plt.ylim(6.,8.)
     plt.title('Equivalent widths over Time', fontsize=12)
     plt.xlabel('Time', fontsize=12)
     plt.ylabel('Equivalent Width - EW', fontsize=12)
@@ -2928,17 +3141,45 @@ if plot_ew == True:
     plt.show()
 
     if save_output == True:
-        np.savetxt(SBmodel_name + '/Haew.txt', population_Ha_ew)
-        np.savetxt(SBmodel_name + '/Hbew.txt', population_Hb_ew)
-        np.savetxt(SBmodel_name + '/Pbew.txt', population_Pb_ew)
-        np.savetxt(SBmodel_name + '/Bgew.txt', population_Bg_ew)
+        if star_formation_option == 'ISF':
+            np.savetxt(SBmodel_name + '/Haew.txt', population_Ha_ew)
+            np.savetxt(SBmodel_name + '/Hbew.txt', population_Hb_ew)
+            np.savetxt(SBmodel_name + '/Pbew.txt', population_Pb_ew)
+            np.savetxt(SBmodel_name + '/Bgew.txt', population_Bg_ew)
+        if star_formation_option == 'CSF':
+            np.savetxt(SBmodel_name + '/Haew.txt', csf_Ha_ews)
+            np.savetxt(SBmodel_name + '/Hbew.txt', csf_Hb_ews)
+            np.savetxt(SBmodel_name + '/Pbew.txt', csf_Pb_ews)
+            np.savetxt(SBmodel_name + '/Bgew.txt', csf_Bg_ews)
                 
 if plot_colours == True:
     
+    # colors_SB99 = np.genfromtxt(SB99model_name+'/'+SB99model_name+'.color', skip_header=7)
+    # times_SB99 = colors_SB99[:,0]
+    # MV_SB99 = colors_SB99[:,11]
+    
+    if star_formation_option == 'CSF':
+        csf_population_Vmags = []
+        csf_population_Umags = []
+        csf_population_Imags = []
+        csf_population_Bmags = []
+        csf_population_absVmags = []
+        for i in range(len(csf_population_flux_total)):
+            csf_timestep_Vmag, csf_timestep_Umag, csf_timestep_Imag, csf_timestep_Bmag, csf_timestep_absVmag = colours(csf_population_flux_total[i])
+            csf_population_Vmags.append(csf_timestep_Vmag)
+            csf_population_Umags.append(csf_timestep_Umag)
+            csf_population_Imags.append(csf_timestep_Imag)
+            csf_population_Bmags.append(csf_timestep_Bmag)
+            csf_population_absVmags.append(csf_timestep_absVmag)
+        
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(times_steps_log, population_absVmag, label='pySB $M_{V}$')
+    #ax.plot(np.log10(times_SB99), MV_SB99, label='SB99 MV')
+    if star_formation_option == 'ISF':
+        ax.plot(times_steps_log, population_absVmag, label='pySB $M_{V}$')
+    if star_formation_option == 'CSF':
+        ax.plot(times_steps_log, csf_population_absVmags, label='pySB $M_{V}$')
     plt.xlim(6.,8.)
     #plt.ylim(44.,54.)
     ax.invert_yaxis()
@@ -2949,19 +3190,43 @@ if plot_colours == True:
     plt.legend()
     plt.show()
 
-    colours_output = np.column_stack((population_Vmag, population_Umag, population_Imag, population_Bmag, population_absVmag))
+    if star_formation_option == 'ISF':
+        colours_output = np.column_stack((population_Vmag, population_Umag, population_Imag, population_Bmag, population_absVmag))
+    if star_formation_option == 'CSF':
+        csf_colours_output = np.column_stack((csf_population_Vmags, csf_population_Umags, csf_population_Imags, csf_population_Bmags, csf_population_absVmags))
+
     colours_header = 'V, U, I, B, M_V'
     
     if save_output == True:
         
-        np.savetxt(SBmodel_name + '/colours.txt', colours_output, header=colours_header)
+        if star_formation_option == 'ISF':
+            np.savetxt(SBmodel_name + '/colours.txt', colours_output, header=colours_header)
+        if star_formation_option == 'CSF':
+            np.savetxt(SBmodel_name + '/colours.txt', csf_colours_output, header=colours_header)
+
         
 if plot_SN_rate == True:
+    
+    # snr_SB99 = np.genfromtxt(SB99model_name+'/'+SB99model_name+'.snr', skip_header=7)
+    # times_steps_SB99 = snr_SB99[:,0]
+    # snrate_SB99 = snr_SB99[:,1]
+    # snr_wind_SB99 = snr_SB99[:,9]
+    # No_stars_SB99 = 10**(np.array(snrate_SB99)) * 1.0e5
+    
+    
+    if star_formation_option == 'CSF':
+        population_SNrate_nolog = 10**np.array(SN_rates_csf_calc) 
+        csf_SNrate_cumsum = np.cumsum(population_SNrate_nolog)
+        csf_SNrate = np.log10(csf_SNrate_cumsum)
     
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.plot(np.log10(times_steps), SN_rates, label='pySB')
+    #ax.plot(np.log10(times_steps_SB99), snrate_SB99, label='SB99')
+    if star_formation_option == 'ISF':
+        ax.plot(np.log10(times_steps), SN_rates, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.plot(np.log10(times_steps), csf_SNrate, label='pySB')
     plt.xlim(6.,8.)
     plt.ylim(-4.,-1.8)
     plt.title('SN rate over Time', fontsize=12)
@@ -2974,7 +3239,10 @@ if plot_SN_rate == True:
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
-    ax.scatter(np.log10(times_steps), SN_rates, label='pySB')
+    if star_formation_option == 'ISF':
+        ax.scatter(np.log10(times_steps), SN_rates, label='pySB')
+    if star_formation_option == 'CSF':
+        ax.scatter(np.log10(times_steps), csf_SNrate, label='pySB')
     plt.xlim(6.,8.)
     plt.ylim(-5.,-1.8)
     plt.title('SN rate over Time', fontsize=12)
@@ -2986,5 +3254,10 @@ if plot_SN_rate == True:
     
     if save_output == True:
         
-        np.savetxt(SBmodel_name + '/SNrate.txt', np.column_stack((times_steps, SN_rates)))
+        if star_formation_option == 'ISF':
+            np.savetxt(SBmodel_name + '/SNrate.txt', np.column_stack((times_steps, SN_rates)))
+            
+        if star_formation_option == 'CSF':
+            np.savetxt(SBmodel_name + '/SNrate.txt', np.column_stack((times_steps, csf_SNrate)))
+
                 
