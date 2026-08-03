@@ -48,7 +48,7 @@ elif input_option == 'MAIN_CODE':
     
     Z = 'MW' #Z options are MWC, MW, LMC, SMC, IZw18, XMP and Z0 (which correspond to Z=0.02, 0.014, 0.006, 0.002, 0.0004, 0.00001 and 0.0 respectively) although if the WMbasic OB models are used the spectra grid metallicities vary slightly)
     SED_library = 'FW' #options are FW, WM and PoWR which refer to the Fastwind, WMbasic and PoWR OB low resolution spectral libraries
-    spectra_library = 'WM' #options are WM which refer tos the WMbasic OB high resolution spectral library. PoWR and FW to come soon
+    spectra_library = 'WM' #options are WM and PoWR which refer to the WMbasic OB high resolution spectral library, PoWR is the Potsdam grid. FW models to come soon
     rot = False #options are True to use tracks with 0.4v_critical rotation or False for non-rotating tracks
     
     plot_ion_flux = True
@@ -80,7 +80,7 @@ elif input_option == 'MAIN_CODE':
         maximum_SN_mass = 120. #maximum stellar initial mass (in Msol) that is accounted for as going supernova
     
     if save_output == True:
-        SBmodel_name = 'pysb_testmodJul30' #set the output folder name here!
+        SBmodel_name = 'pysb_testmod' #set the output folder name here!
         
     if spectra_library == 'PoWR':
         mass_loss_rate_option = 'DEFAULT' #Mdot options are DEFAULT (Vd3), HIGH, MODERATE and LOW. Default has only be implemented for now, also not all options will be available for all metallicities
@@ -800,7 +800,7 @@ WC_reformed_spec_grid_powr, WC_spec_params_reform_powr, WC_spec_params_teff_powr
 WN_reformed_spec_grid_powr, WN_spec_params_reform_powr, WN_spec_params_teff_powr, WN_spec_params_radius_powr, WN_spec_params_length_powr= reform_spec_grid_powr(WN_spectra_powr, WN_spec_params_powr)
 
 # %% 
-
+#plot SEDs to for checks
 # for i in range(len(reformed_spec_grid)):
 #     fig=plt.figure()
 #     plt.style.use('default')
@@ -823,7 +823,7 @@ WN_reformed_spec_grid_powr, WN_spec_params_reform_powr, WN_spec_params_teff_powr
 #     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[50])+20.), label='t=50')
 #     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[100])+20.), label='t=100')
 #     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[250])+20.), label='t=250')
-#     plt.title('Hires ifa spectra', fontsize=12)
+#     plt.title('SEDs', fontsize=12)
 #     plt.xlabel('Wave', fontsize=12)
 #     plt.ylabel('Flux', fontsize=12)
 #     plt.tight_layout()
@@ -832,6 +832,7 @@ WN_reformed_spec_grid_powr, WN_spec_params_reform_powr, WN_spec_params_teff_powr
 #     plt.legend()
 #     plt.show()
     
+# #plot WR SEDs for checks 
 # for i in range(len(WN_reformed_spec_grid)):
 #     fig=plt.figure()
 #     plt.style.use('default')
@@ -854,7 +855,7 @@ WN_reformed_spec_grid_powr, WN_spec_params_reform_powr, WN_spec_params_teff_powr
 #     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[50])+20.), label='t=50')
 #     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[100])+20.), label='t=100')
 #     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[250])+20.), label='t=250')
-#     plt.title('Hires ifa spectra', fontsize=12)
+#     plt.title('WR SEDs', fontsize=12)
 #     plt.xlabel('Wave', fontsize=12)
 #     plt.ylabel('Flux', fontsize=12)
 #     plt.tight_layout()
@@ -948,6 +949,40 @@ elif spectra_library == 'WM':
         lowmass_hires_spec.append(lowmass_hires_spectrum)
         lowmass_hires_cont.append(lowmass_hires_continuum)
     lowmass_hires_int_spec = integrate_spec_grid(lowmass_hires_spec)
+    
+#%%
+
+#plot hires spectra for checks
+# for i in range(len(hires_spec_reformed)):
+#     fig=plt.figure()
+#     plt.style.use('default')
+#     ax=fig.add_subplot(111)
+#     #ind_powr_plot = 11
+#     #test_spec = WC_reformed_spec_grid[ind_powr_plot]
+#     #test_flux = test_spec[:,1]
+#     #test_wave = test_spec[:,0]
+#     #ax.plot(test_wave, test_flux, label='PoWR WC spec Teff='+str(WC_spec_params_teff[ind_powr_plot]))
+#     #ax.plot(SB99_wave, 10**get_SB99_spec(1), label='SB99_t2Myr')
+#     #ax.plot(hires_wave_grid, hires_seds[0], label='t=10')
+#     #assigned_flux_scaled = assigned_spectrum[:,1] * * 1.0e20
+    
+#     #ax.plot(hires_wave_grid, hires_spec[2][:,1], label=(str(np.log10(hires_teffs[0])),str(hires_loggs[0])))
+#     #ax.plot(hires_wave_grid, hires_spec[260][:,1], label=(str(np.log10(hires_teffs[260])),str(hires_loggs[260])))
+#     ind_check = i
+    
+#     ax.plot(hires_wave_grid, hires_spec_reformed[ind_check, :], label=(str(hires_teffs[ind_check]), str(hires_logls[ind_check])))
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[20])+20.), label='t=20')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[50])+20.), label='t=50')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[100])+20.), label='t=100')
+#     #ax.plot(reformed_spec_grid[0][:,0], 10**(np.log10(population_flux_iterations[250])+20.), label='t=250')
+#     plt.title('Hires ifa spectra', fontsize=12)
+#     plt.xlabel('Wave', fontsize=12)
+#     plt.ylabel('Flux', fontsize=12)
+#     plt.tight_layout()
+#     #plt.xlim(1.5,4.5)
+#     plt.xlim(900,2000)
+#     plt.legend()
+#     plt.show()
     
 # %% 
     
@@ -2314,6 +2349,9 @@ def planck(wave, teff):
 
     return(planck_spectrum)
 
+def f(x, A, B): # this is your 'straight line' y=f(x)
+    return A*x + B
+
 # %% 
 
 ind_spectrum = 4
@@ -2739,7 +2777,7 @@ if plot_isochrones == True:
     
 if plot_SED_with_time == True:
     
-    # SB99model_name = 'Z00_V00_sampling' # Z014_V00_CSF Z14_V00_sampling_FW Z014_V00_sampling_24mod_WM Z006_V00_sampling Z014_V00_sampling Z020_V00_sampling Z014_V40_sampling     
+    #SB99model_name = 'Z002_V00_sampling' # Z014_V00_CSF Z14_V00_sampling_FW Z014_V00_sampling_24mod_WM Z006_V00_sampling Z014_V00_sampling Z020_V00_sampling Z014_V40_sampling     
 
     # SBspectrum_name = 'spectrum'
     # SBfile_spectrum = SB99model_name+'/'+SB99model_name+'.'+SBspectrum_name
@@ -2904,7 +2942,7 @@ if plot_hires_spectra == True:
             
     #     return(return_arr)
         
-    # hires_spec_time = 10
+    #hires_spec_time = 40
     
     if star_formation_option == 'ISF':
         hires_plot_choice_flux = population_hires_flux_iterations_send[int(hires_spec_time*10)]
