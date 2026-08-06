@@ -66,7 +66,7 @@ elif input_option == 'MAIN_CODE':
     
     input_imf_option = False #If False the IMF is defined as in the main code, if True the IMF is read in through an external file. The current format is to read in a list of individual stellar masses, which are then counted and sorted into bins. This format was the easiest way to generate a stochastically sampled IMF.
     
-    save_output = False #Set as True (save output to folder) or False (print/display output only)
+    save_output = True #Set as True (save output to folder) or False (print/display output only)
 
     if input_imf_option == True:
         stochastic_imf_file = 'chabrier_stars.npy'
