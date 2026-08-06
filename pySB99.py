@@ -41,7 +41,7 @@ elif input_option == 'MAIN_CODE':
     IMF_exponents = [1.3, 2.3]
     IMF_mass_limits = 0.1, 0.5, 120.
     
-    output_age = 2.0
+    output_age = 2.0 #Myr
     
     #Variable interpolation resolution factor, lower for speed up or higher for higher resolution isochrone interpolation
     run_speed_mode = 'DEFAULT' #DEFAULT should take ~60s. Options include 'FAST' (takes ~20s, only recommended for tests and models <10Myr) and 'HIGH_RES' (takes a while but all outputs are have a very high resolution interpolation in mass)
@@ -50,6 +50,7 @@ elif input_option == 'MAIN_CODE':
     SED_library = 'FW' #options are FW, WM and PoWR which refer to the Fastwind, WMbasic and PoWR OB low resolution spectral libraries
     spectra_library = 'WM' #options are WM and PoWR which refer to the WMbasic OB high resolution spectral library, PoWR is the Potsdam grid. FW models to come soon
     rot = False #options are True to use tracks with 0.4v_critical rotation or False for non-rotating tracks
+    track_choice = 'GENEC' #Options for now are 'GENEC' and 'Pauli' (see Pauli+26). Parsec likely coming soon. Note Pauli are rotating around 100km/s
     
     plot_ion_flux = True
     plot_wind = True
@@ -65,7 +66,7 @@ elif input_option == 'MAIN_CODE':
     
     input_imf_option = False #If False the IMF is defined as in the main code, if True the IMF is read in through an external file. The current format is to read in a list of individual stellar masses, which are then counted and sorted into bins. This format was the easiest way to generate a stochastically sampled IMF.
     
-    save_output = True #Set as True (save output to folder) or False (print/display output only)
+    save_output = False #Set as True (save output to folder) or False (print/display output only)
 
     if input_imf_option == True:
         stochastic_imf_file = 'chabrier_stars.npy'
@@ -93,6 +94,9 @@ plot_spectral_types = False
 '''Load input files based on chosen metallicity and mass limits'''
 if Z =='MWC':
     file_path = 'pySB99_files/Z020_pySB99_files/'
+    if track_choice == 'Pauli':
+        print('There are no Pauli tracks at Z=0.02')
+        exit()
     mass_grid = [300, 200., 150., 120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
     if IMF_mass_limits[-1] > 300.:
         print('Tracks do not exist at Z=0.20 above 300Msol')
@@ -150,25 +154,34 @@ if Z =='MWC':
     
 if Z == 'MW':
     file_path = 'pySB99_files/Z014_pySB99_files/'
-    if rot == True:
-        mass_grid = [300., 250., 180., 120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
-        if IMF_mass_limits[-1] > 300.:
-            print('Tracks with rotation do not exist at Z=0.014 above 300Msol')
-            exit()
-        evo_tracks = np.load(file_path + 'Z014v40_VMS_tracks.npy')
-        minimum_wr_mass=20.
-    elif rot == False:
-        #mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 11.5, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]        
-        mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]  
-        if IMF_mass_limits[-1] > 500.:
-            print('Tracks do not exist at Z=0.014 above 500Msol')
-            exit()
-        #evo_tracks = np.load(file_path + 'Z014v00_VMS_tracks.npy')
-        evo_tracks = np.load(file_path + 'Z014v40_VMS_tracks_eleventst.npy')
-
-        # evo_tracks_eleventst = np.delete(evo_tracks, np.s_[7600:8000], 0)
-        # np.save('Z014v40_VMS_tracks_eleventst.npy', evo_tracks_eleventst)
+    if track_choice == 'Pauli':
+        evo_tracks = np.load(file_path + 'Z014v00_VMS_tracks_pauli_woutLBVmdot.npy')
+        #evo_tracks = np.load(file_path + 'Z014v00_VMS_tracks_pauli_withLBVmdot.npy')
+        mass_grid = [316., 282., 251., 223., 200., 178., 158., 141., 126., 112., 100., 89., 80., 70., 63., 56., 50., 44., 40., 35., 32., 28., 25., 22., 20., 18., 16., 14., 12., 11., 10., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]        
         minimum_wr_mass=25.
+        if IMF_mass_limits[-1] > 315.:
+            print('Pauli tracks do not exist at Z=0.014 above 315Msol')
+            exit()
+    if track_choice == 'GENEC':
+        if rot == True:
+            mass_grid = [300., 250., 180., 120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
+            if IMF_mass_limits[-1] > 300.:
+                print('Tracks with rotation do not exist at Z=0.014 above 300Msol')
+                exit()
+            evo_tracks = np.load(file_path + 'Z014v40_VMS_tracks.npy')
+            minimum_wr_mass=20.
+        elif rot == False:
+            mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 11.5, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]        
+            #mass_grid = [500., 300, 200., 150., 120., 85., 60., 50., 40., 32., 25., 23., 22., 20., 17., 15., 14., 12., 11.75, 10., 9., 8., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]  
+            if IMF_mass_limits[-1] > 500.:
+                print('Tracks do not exist at Z=0.014 above 500Msol')
+                exit()
+            evo_tracks = np.load(file_path + 'Z014v00_VMS_tracks.npy')
+            #evo_tracks = np.load(file_path + 'Z014v40_VMS_tracks_eleventst.npy')
+    
+            # evo_tracks_eleventst = np.delete(evo_tracks, np.s_[7600:8000], 0)
+            # np.save('Z014v40_VMS_tracks_eleventst.npy', evo_tracks_eleventst)
+            minimum_wr_mass=25.
     if SED_library == 'WM':
         spectra_grid_file = file_path + 'WMbasic_OB_Z020_test.dat'
     if SED_library == 'FW':
@@ -218,16 +231,25 @@ if Z == 'MW':
 
 if Z == 'LMC':
     file_path = 'pySB99_files/Z006_pySB99_files/'
-    mass_grid = [300, 250., 180., 120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
-    if IMF_mass_limits[-1] > 300.:
-        print('Tracks do not exist at Z=0.006 above 300Msol')
-        exit()
-    if rot == True:
-        evo_tracks = np.load(file_path + 'Z006v40_VMS_tracks.npy')
+    if track_choice == 'Pauli':
+        evo_tracks = np.load(file_path + 'Z006v00_VMS_tracks_pauli_woutLBVmdot.npy')
+        #evo_tracks = np.load(file_path + 'Z006v00_VMS_tracks_pauli_withLBVmdot.npy')
+        mass_grid = [400., 355., 316., 282., 251., 223., 200., 178., 158., 141., 126., 112., 100., 89., 80., 70., 63., 56., 50., 44., 40., 35., 32., 28., 25., 22., 20., 18., 16., 14., 12., 11., 10., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
         minimum_wr_mass=25.
-    elif rot == False:
-        evo_tracks = np.load(file_path + 'Z006v00_VMS_tracks.npy')
-        minimum_wr_mass=25.
+        if IMF_mass_limits[-1] > 400.:
+            print('Pauli tracks do not exist at Z=0.006 above 400Msol')
+            exit()
+    if track_choice == 'GENEC':
+        mass_grid = [300, 250., 180., 120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
+        if IMF_mass_limits[-1] > 300.:
+            print('GENEC tracks do not exist at Z=0.006 above 300Msol')
+            exit()
+        if rot == True:
+            evo_tracks = np.load(file_path + 'Z006v40_VMS_tracks.npy')
+            minimum_wr_mass=25.
+        elif rot == False:
+            evo_tracks = np.load(file_path + 'Z006v00_VMS_tracks.npy')
+            minimum_wr_mass=25.
     if SED_library == 'WM':
         spectra_grid_file = file_path + 'WMbasic_OB_Z008_tst.dat'
     if SED_library == 'FW':
@@ -277,16 +299,25 @@ if Z == 'LMC':
 
 if Z == 'SMC':
     file_path = 'pySB99_files/Z002_pySB99_files/'
-    mass_grid = [120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
-    if IMF_mass_limits[-1] > 120.:
-        print('Tracks do not exist at Z=0.002 above 120Msol')
-        exit()
-    if rot == True:
-        evo_tracks = np.load(file_path + 'Z002v40_tracks.npy')
+    if track_choice == 'Pauli':
+        evo_tracks = np.load(file_path + 'Z002v00_VMS_tracks_pauli_woutLBVmdot.npy')
+        #evo_tracks = np.load(file_path + 'Z002v00_VMS_tracks_pauli_withLBVmdot.npy')
+        mass_grid = [400., 355., 316., 282., 251., 223., 200., 178., 158., 141., 126., 112., 100., 89., 80., 70., 63., 56., 50., 44., 40., 35., 32., 28., 25., 22., 20., 18., 16., 14., 12., 11., 10., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
         minimum_wr_mass=84.
-    elif rot == False:
-        evo_tracks = np.load(file_path + 'Z002v00_tracks.npy')
-        minimum_wr_mass=84.
+        if IMF_mass_limits[-1] > 400.:
+            print('Pauli tracks do not exist at Z=0.002 above 400Msol')
+            exit()
+    if track_choice == 'GENEC':
+        mass_grid = [120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7, 1.5, 1.35, 1.25, 1.1, 1., 0.9, 0.8]
+        if IMF_mass_limits[-1] > 120.:
+            print('Tracks do not exist at Z=0.002 above 120Msol')
+            exit()
+        if rot == True:
+            evo_tracks = np.load(file_path + 'Z002v40_tracks.npy')
+            minimum_wr_mass=84.
+        elif rot == False:
+            evo_tracks = np.load(file_path + 'Z002v00_tracks.npy')
+            minimum_wr_mass=84.
     if SED_library == 'WM':
         spectra_grid_file = file_path + 'WMbasic_OB_Z004_tst.dat'
     if SED_library == 'FW':
@@ -333,16 +364,25 @@ if Z == 'SMC':
 
 if Z == 'IZw18': 
     file_path = 'pySB99_files/Z0004_pySB99_files/'
-    mass_grid = [120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7]
-    if IMF_mass_limits[-1] > 120.:
-        print('Tracks do not exist at 0.0004 above 120Msol')
-        exit()
-    if rot == True:
-        evo_tracks = np.load(file_path + 'Z0004v40_tracks.npy')
+    if track_choice == 'Pauli':
+        evo_tracks = np.load(file_path + 'Z0004v00_VMS_tracks_pauli_woutLBVmdot.npy')
+        #evo_tracks = np.load(file_path + 'Z0004v00_VMS_tracks_pauli_withLBVmdot.npy')
+        mass_grid= [400., 355., 316., 282., 251., 223., 200., 178., 158., 141., 126., 112., 100., 89., 80., 70., 63., 56., 50., 44., 40., 35., 32., 28., 25., 22., 20., 18., 16., 14., 12., 11., 10., 9., 7., 5., 4., 3., 2.5, 2., 1.7]        
         minimum_wr_mass=84.
-    elif rot == False:
-        evo_tracks = np.load(file_path + 'Z0004v00_tracks.npy')
-        minimum_wr_mass=84.
+        if IMF_mass_limits[-1] > 400.:
+            print('Pauli tracks do not exist at Z=0.0004 above 400Msol')
+            exit()
+    if track_choice == 'GENEC':
+        mass_grid = [120., 85., 60., 40., 32., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7]
+        if IMF_mass_limits[-1] > 120.:
+            print('Tracks do not exist at 0.0004 above 120Msol')
+            exit()
+        if rot == True:
+            evo_tracks = np.load(file_path + 'Z0004v40_tracks.npy')
+            minimum_wr_mass=84.
+        elif rot == False:
+            evo_tracks = np.load(file_path + 'Z0004v00_tracks.npy')
+            minimum_wr_mass=84.
     if SED_library == 'WM':
         spectra_grid_file = file_path + 'WMbasic_OB_Z001_tst.dat'
     if SED_library == 'FW':
@@ -389,6 +429,9 @@ if Z == 'IZw18':
     
 if Z == 'XMP':
     file_path = 'pySB99_files/Z00001_pySB99_files/'
+    if track_choice == 'Pauli':
+        print('There are no Pauli tracks at Z=0.00001')
+        exit()
     mass_grid = [500., 300., 200., 150., 120., 85., 60., 40., 30., 25., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7]
     if IMF_mass_limits[-1] > 500.:
         print('Tracks do not exist at 0.00001 above 500Msol')
@@ -446,6 +489,9 @@ if Z == 'XMP':
 
 if Z == 'Z0':
     file_path = 'pySB99_files/Z00_pySB99_files/'
+    if track_choice == 'Pauli':
+        print('There are no Pauli tracks at Z=0.00')
+        exit()
     if rot == True:
         mass_grid = [120., 85., 60., 40., 30., 20., 15., 12., 9., 7., 5., 4., 3., 2.5, 2., 1.7]
         if IMF_mass_limits[-1] > 120.:
@@ -1144,7 +1190,7 @@ timestep_mass_ind = get_timestep_0_ind(times_steps[0])
 
 # %% 
 
-def get_timestep_params(timestep, timestep_mass_ind):
+def get_timestep_params(timestep, timestep_mass_ind, track_choice):
     '''
     Get stellar parameters for each timestep. A time is given as input, this is matched to the closest age in each
     grid_track and the corresponding parameters are pulled for that point. Then the index to remove duplicates, defined above,
@@ -1249,19 +1295,19 @@ def get_timestep_params(timestep, timestep_mass_ind):
     timestep_uncorr_teff_final = timestep_teffs_calc
 
     #Turn off for plotting isochrones
-
-    WR_correction_factor = 0.6
-    for i in range(len(timestep_masses_final)):
-        if timestep_H_abundances_final[i] < 0.1:# and timestep_temps_final[i] > 4.4:
-            timestep_core_teff_final = 10**timestep_core_temps_final[i]
-            corrected_teff=timestep_core_teff_final+(WR_correction_factor-1.0)*(timestep_core_teff_final-timestep_teffs_calc[i])
-            timestep_temps_final[i]=np.log10(corrected_teff)
-            #print('Grid teff = ',grid_teff)
-            #print('Grid core teff = ',grid_core_teff)
-            #print('Grid teff corr= ',corrected_teff)
-
+    if track_choice == 'GENEC':
+        WR_correction_factor = 0.6
+        for i in range(len(timestep_masses_final)):
+            if timestep_H_abundances_final[i] < 0.1:# and timestep_temps_final[i] > 4.4:
+                timestep_core_teff_final = 10**timestep_core_temps_final[i]
+                corrected_teff=timestep_core_teff_final+(WR_correction_factor-1.0)*(timestep_core_teff_final-timestep_teffs_calc[i])
+                timestep_temps_final[i]=np.log10(corrected_teff)
+                #print('Grid teff = ',grid_teff)
+                #print('Grid core teff = ',grid_core_teff)
+                #print('Grid teff corr= ',corrected_teff)
+            
     #ind_SN_stars = [i for i in range(len(timestep_masses_final)) if timestep_masses_final[i] < 0.5]
-    ind_SN_stars = [i for i in range(len(timestep_lums_final)) if timestep_lums_final[i] < -19.]
+    #ind_SN_stars = [i for i in range(len(timestep_lums_final)) if timestep_lums_final[i] < -19.]
     timestep_temps_final = np.array(timestep_temps_final)
     #timestep_temps_final[ind_SN_stars] = 0.0
 
@@ -1618,18 +1664,21 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
             assigned_spectra.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
             assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
             
-            # cont_flux_lowres_sample = np.interp(cont_wave_grid_calc, assigned_spectrum[:,0], assigned_spectrum[:,1])
+            cont_flux_lowres_sample = np.interp(cont_wave_grid_calc, assigned_spectrum[:,0], assigned_spectrum[:,1])
             
-            # cont_flux_average = []
-            # for i in range(len(cont_flux_lowres_sample)):
-            #     cont_flux_average_i = np.log10( (1.0e-30 + cont_flux_lowres_sample[i] + assigned_spectrum[:,1][i-1] + assigned_spectrum[:,1][i+1] ) / 3 )
-            #     cont_flux_average.append(cont_flux_average_i)
+            cont_flux_average = []
+            for i in range(len(cont_flux_lowres_sample)):
+                ind_flux_norm = np.abs(cont_flux_lowres_sample[i] - assigned_spectrum[:,1]).argmin()
+                flux_norm_lower = assigned_spectrum[:,1][ind_flux_norm - 1]
+                flux_norm_higher = assigned_spectrum[:,1][ind_flux_norm + 1]
+                cont_flux_average_i = np.log10( (1.0e-30 + cont_flux_lowres_sample[i] + flux_norm_lower + flux_norm_higher ) / 3 )
+                cont_flux_average.append(cont_flux_average_i)
                 
-            # cont_flux_resampled = np.interp(hires_wave_grid, cont_wave_grid_calc, cont_flux_average)
-            # cont_flux_resampled_scaled = 10**cont_flux_resampled
+            cont_flux_resampled = np.interp(hires_wave_grid, cont_wave_grid_calc, cont_flux_average)
+            cont_flux_resampled_scaled = 10**cont_flux_resampled
             
-            # assigned_cont.append(np.column_stack((hires_wave_grid,cont_flux_resampled_scaled)))
-            assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            assigned_cont.append(np.column_stack((hires_wave_grid,cont_flux_resampled_scaled)))
+            #assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
             #assigned_cont.append(lowmass_hires_cont[nearest_spec_ind])
 
             #hires_choice.append('nope')
@@ -1654,18 +1703,21 @@ def assign_spectra_to_grid_hires(timestep_temps_final, hires_teffs, hires_loggs,
             assigned_integrated_spectra.append(lowmass_int_spec[nearest_spec_ind])
             #assigned_integrated_spectra.append(lowmass_hires_int_spec[nearest_spec_ind])
             
-            # cont_flux_lowres_sample = np.interp(cont_wave_grid_calc, assigned_spectrum[:,0], assigned_spectrum[:,1])
+            cont_flux_lowres_sample = np.interp(cont_wave_grid_calc, assigned_spectrum[:,0], assigned_spectrum[:,1])
             
-            # cont_flux_average = []
-            # for i in range(len(cont_flux_lowres_sample)):
-            #     cont_flux_average_i = np.log10( (1.0e-30 + cont_flux_lowres_sample[i] + assigned_spectrum[:,1][i-1] + assigned_spectrum[:,1][i+1] ) / 3 )
-            #     cont_flux_average.append(cont_flux_average_i)
+            cont_flux_average = []
+            for i in range(len(cont_flux_lowres_sample)):
+                ind_flux_norm = np.abs(cont_flux_lowres_sample[i] - assigned_spectrum[:,1]).argmin()
+                flux_norm_lower = assigned_spectrum[:,1][ind_flux_norm - 1]
+                flux_norm_higher = assigned_spectrum[:,1][ind_flux_norm + 1]
+                cont_flux_average_i = np.log10( (1.0e-30 + cont_flux_lowres_sample[i] + flux_norm_lower + flux_norm_higher ) / 3 )
+                cont_flux_average.append(cont_flux_average_i)
                 
-            # cont_flux_resampled = np.interp(hires_wave_grid, cont_wave_grid_calc, cont_flux_average)
-            # cont_flux_resampled_scaled = 10**cont_flux_resampled
+            cont_flux_resampled = np.interp(hires_wave_grid, cont_wave_grid_calc, cont_flux_average)
+            cont_flux_resampled_scaled = 10**cont_flux_resampled
             
-            # assigned_cont.append(np.column_stack((hires_wave_grid,cont_flux_resampled_scaled)))
-            assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
+            assigned_cont.append(np.column_stack((hires_wave_grid,cont_flux_resampled_scaled)))
+            #assigned_cont.append(np.column_stack((hires_wave_grid,assigned_flux_resampled)))
             #assigned_cont.append(lowmass_hires_cont[nearest_spec_ind])
             
             # hires_choice.append('nope')
@@ -2435,7 +2487,7 @@ population_Ha_luminosity = []
 population_Ha_continuum_flux = []
 for i in range(len(times_steps)):
     timestep_ex = times_steps[i]
-    timestep_ages_final,timestep_temps_final,timestep_lums_final,timestep_masses_final,timestep_H_abundances_final, timestep_loggs_final, timestep_mass_loss_rates_final, timestep_12C_abundances_final, timestep_14N_abundances_final, timestep_16O_abundances_final, timestep_mass_test, timestep_cnr, timestep_coher, timestep_uncorr_teffs = get_timestep_params(timestep_ex, timestep_mass_ind)
+    timestep_ages_final,timestep_temps_final,timestep_lums_final,timestep_masses_final,timestep_H_abundances_final, timestep_loggs_final, timestep_mass_loss_rates_final, timestep_12C_abundances_final, timestep_14N_abundances_final, timestep_16O_abundances_final, timestep_mass_test, timestep_cnr, timestep_coher, timestep_uncorr_teffs = get_timestep_params(timestep_ex, timestep_mass_ind, track_choice)
 
     if i == 0:
         if input_imf_option == True:
@@ -2777,7 +2829,7 @@ if plot_isochrones == True:
     
 if plot_SED_with_time == True:
     
-    #SB99model_name = 'Z002_V00_sampling' # Z014_V00_CSF Z14_V00_sampling_FW Z014_V00_sampling_24mod_WM Z006_V00_sampling Z014_V00_sampling Z020_V00_sampling Z014_V40_sampling     
+    # SB99model_name = 'Z006_V00_sampling' # Z014_V00_CSF Z14_V00_sampling_FW Z014_V00_sampling_24mod_WM Z006_V00_sampling Z014_V00_sampling Z020_V00_sampling Z014_V40_sampling     
 
     # SBspectrum_name = 'spectrum'
     # SBfile_spectrum = SB99model_name+'/'+SB99model_name+'.'+SBspectrum_name
@@ -2793,49 +2845,49 @@ if plot_SED_with_time == True:
         
     #     return(SB99_logL)
     
-    def read_pySB99_model(model_dir):
+    # def read_pySB99_model(model_dir):
         
-        inputs_file = 'input.txt'
-        txt_file_HI = 'ion_flux_HI.txt'
-        txt_file_HeI = 'ion_flux_HeI.txt'
-        txt_file_HeII = 'ion_flux_HeII.txt'
-        Lbol_file = 'bololum.txt'
-        uvslope_file = 'uv_slope.txt'
-        Ha_file = 'Haew.txt'
-        windmom_file = 'windmom.txt'
-        windpower_file = 'windpower.txt'
-        #Mv_file = 'Mv.txt'
-        SED_file = 'pySB_SED_stellar.npy'
-        SED_file_neb = 'pySB_SED_stellar_and_nebular.npy'
-        SED_wave_file = 'SED_wavelength.txt'
-        SED_times_file = 'SED_times.txt'
-        spectrum_file = 'pySB_hires_spectrum.npy'
-        spectrum_norm_file = 'pySB_hires_norm_spectrum.npy'
-        spectrum_wave_file = 'spectrum_wavelength.txt'
+    #     inputs_file = 'input.txt'
+    #     txt_file_HI = 'ion_flux_HI.txt'
+    #     txt_file_HeI = 'ion_flux_HeI.txt'
+    #     txt_file_HeII = 'ion_flux_HeII.txt'
+    #     Lbol_file = 'bololum.txt'
+    #     uvslope_file = 'uv_slope.txt'
+    #     Ha_file = 'Haew.txt'
+    #     windmom_file = 'windmom.txt'
+    #     windpower_file = 'windpower.txt'
+    #     #Mv_file = 'Mv.txt'
+    #     SED_file = 'pySB_SED_stellar.npy'
+    #     SED_file_neb = 'pySB_SED_stellar_and_nebular.npy'
+    #     SED_wave_file = 'SED_wavelength.txt'
+    #     SED_times_file = 'SED_times.txt'
+    #     spectrum_file = 'pySB_hires_spectrum.npy'
+    #     spectrum_norm_file = 'pySB_hires_norm_spectrum.npy'
+    #     spectrum_wave_file = 'spectrum_wavelength.txt'
         
-        ion_flux_HI = np.genfromtxt(model_dir + '/' + txt_file_HI)
-        ion_flux_HeI = np.genfromtxt(model_dir + '/' + txt_file_HeI)
-        ion_flux_HeII = np.genfromtxt(model_dir + '/' + txt_file_HeII)
-        Lbol = np.genfromtxt(model_dir + '/' + Lbol_file)
-        uvslope = np.genfromtxt(model_dir + '/' + uvslope_file)
-        Ha_ew = np.genfromtxt(model_dir + '/' + Ha_file)
-        windmom = np.genfromtxt(model_dir + '/' + windmom_file)
-        windpower = np.genfromtxt(model_dir + '/' + windpower_file)
-        SED = np.load(model_dir + '/' + SED_file)
-        SED_neb = np.load(model_dir + '/' + SED_file_neb)
-        SED_wavelength = np.genfromtxt(model_dir + '/' + SED_wave_file)
-        SED_times = np.genfromtxt(model_dir + '/' + SED_times_file)
-        spectrum = np.load(model_dir + '/' + spectrum_file)
-        spectrum_norm = np.load(model_dir + '/' + spectrum_norm_file)
-        spectrum_wavelength = np.genfromtxt(model_dir + '/' + spectrum_wave_file)
+    #     ion_flux_HI = np.genfromtxt(model_dir + '/' + txt_file_HI)
+    #     ion_flux_HeI = np.genfromtxt(model_dir + '/' + txt_file_HeI)
+    #     ion_flux_HeII = np.genfromtxt(model_dir + '/' + txt_file_HeII)
+    #     Lbol = np.genfromtxt(model_dir + '/' + Lbol_file)
+    #     uvslope = np.genfromtxt(model_dir + '/' + uvslope_file)
+    #     Ha_ew = np.genfromtxt(model_dir + '/' + Ha_file)
+    #     windmom = np.genfromtxt(model_dir + '/' + windmom_file)
+    #     windpower = np.genfromtxt(model_dir + '/' + windpower_file)
+    #     SED = np.load(model_dir + '/' + SED_file)
+    #     SED_neb = np.load(model_dir + '/' + SED_file_neb)
+    #     SED_wavelength = np.genfromtxt(model_dir + '/' + SED_wave_file)
+    #     SED_times = np.genfromtxt(model_dir + '/' + SED_times_file)
+    #     spectrum = np.load(model_dir + '/' + spectrum_file)
+    #     spectrum_norm = np.load(model_dir + '/' + spectrum_norm_file)
+    #     spectrum_wavelength = np.genfromtxt(model_dir + '/' + spectrum_wave_file)
         
-        return(ion_flux_HI, ion_flux_HeI, ion_flux_HeII, Lbol, uvslope, Ha_ew, windmom, windpower, SED, SED_wavelength, SED_times, SED_neb, spectrum, spectrum_norm, spectrum_wavelength)
+    #     return(ion_flux_HI, ion_flux_HeI, ion_flux_HeII, Lbol, uvslope, Ha_ew, windmom, windpower, SED, SED_wavelength, SED_times, SED_neb, spectrum, spectrum_norm, spectrum_wavelength)
 
-    pySB_model_name = 'pysb_testmodJul29'
+    # pySB_model_name = 'pySB_highres_outputs_Feb13/Z006_V40_M300_highres_feb13'
     
-    ion_flux_HI, MWC_ion_flux_HeI, MWC_ion_flux_HeII, MWC_Lbol, MWC_uvslope, MWC_Ha, MWC_windmom, MWC_windpower, SED, SED_wavelength, SED_times, SED_neb, spectrum, spectrum_norm, spectrum_wavelength = read_pySB99_model(pySB_model_name)  
+    # ion_flux_HI, ion_flux_HeI, ion_flux_HeII, Lbol, uvslope, Ha, windmom, windpower, SED, SED_wavelength, SED_times, SED_neb, spectrum, spectrum_norm, spectrum_wavelength = read_pySB99_model(pySB_model_name)  
 
-    #spec_time = 8
+    #spec_time = 1
     
     if star_formation_option == 'ISF':
         SED_plot_choice_flux = population_flux_iterations_send[int(spec_time*10)]
@@ -2856,10 +2908,13 @@ if plot_SED_with_time == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     #ax.plot(wave_grid, 10**get_SB99_spec(int(spec_time*2)), color='tab:blue', label='SB99 - '+str(SBtimes[int(spec_time*2)]/10**6)+'Myr') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
+    #ax.plot(SED_wavelength, 10**SED_neb[int(spec_time*10), :], color='tab:blue', label='GENEC - '+str(SED_times[int(spec_time*10)]/10**6)+'Myr') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
     if star_formation_option == 'ISF':
-        ax.plot(wave_grid, 10**SED_plot_total_choice_flux, label=str(spec_time)+'Myr', color='red')
+        ax.plot(wave_grid, 10**SED_plot_choice_flux, label=str(spec_time)+'Myr - stellar', color='red')
+        ax.plot(wave_grid, 10**SED_plot_total_choice_flux, label=str(spec_time)+'Myr - stellar+neb', color='k')
     if star_formation_option == 'CSF':
-        ax.plot(wave_grid, 10**csf_SED_plot_choice_flux, label=str(spec_time)+'Myr', color='red')
+        ax.plot(wave_grid, 10**csf_SED_plot_choice_flux, label=str(spec_time)+'Myr - stellar', color='red')
+        ax.plot(wave_grid, 10**csf_SED_plot_total_choice_flux, label=str(spec_time)+'Myr - stellar+neb', color='k')
     plt.xlabel('Wavelength [$\AA$]', fontsize=20)
     plt.ylabel('log (Luminosity [$erg s^{-1} \AA^{-1}$])', fontsize=20)
     ax.legend(loc="best",fontsize=18)
@@ -2942,7 +2997,7 @@ if plot_hires_spectra == True:
             
     #     return(return_arr)
         
-    #hires_spec_time = 40
+    # hires_spec_time = 2
     
     if star_formation_option == 'ISF':
         hires_plot_choice_flux = population_hires_flux_iterations_send[int(hires_spec_time*10)]
@@ -2968,6 +3023,7 @@ if plot_hires_spectra == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     #ax.plot(hires_wave_grid_SB99, 10**get_SB99_hires_spec(hires_spec_time*2, 'notnorm'), color='tab:blue', label='SB99') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
+    #ax.plot(spectrum_wavelength, 10**(np.log10(spectrum[int(hires_spec_time*10), :]+1.0e-35)+20.), color='tab:blue', label='GENEC - '+str(SED_times[int(hires_spec_time*10)]/10**6)+'Myr') #time is 2x the time so 2 is 1 Myr #4 for gal/lmc, other for low sampling timestep sb99 run 10Myr
     if star_formation_option == 'ISF':
         ax.plot(hires_wave_grid, 10**hires_plot_choice_flux_wneb, label='pySB t='+str(hires_spec_time)+'Myr', color='tab:red')
     if star_formation_option == 'CSF':
@@ -3060,8 +3116,9 @@ if plot_ion_flux == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     #ax.plot(np.log10(times_SB99), HI_ionflux_SB99, label='SB99')
+    #ax.plot(np.log10(SED_times), ion_flux_HI, label='GENEC')
     if star_formation_option == 'ISF':
-        ax.plot(np.log10(times_steps), population_ion_HI_flux_iterations, label='pySB')
+        ax.plot(np.log10(times_steps), population_ion_HI_flux_iterations, label='Pauli')
     if star_formation_option == 'CSF':
         ax.plot(np.log10(times_steps), csf_HI_flux, label='pySB')
     plt.xlim(6.,8.)
@@ -3078,6 +3135,7 @@ if plot_ion_flux == True:
     ax=fig.add_subplot(111)
     times_steps_log = np.log10(times_steps)
     #ax.plot(np.log10(times_SB99), HEI_ionflux_SB99, label='SB99')
+    #ax.plot(np.log10(SED_times), ion_flux_HeI, label='GENEC')
     if star_formation_option == 'ISF':
         ax.plot(np.log10(times_steps), population_ion_HEI_flux_iterations, label='pySB')
     if star_formation_option == 'CSF':
@@ -3096,6 +3154,7 @@ if plot_ion_flux == True:
     ax=fig.add_subplot(111)
     times_steps_log = np.log10(times_steps)
     #ax.plot(np.log10(times_SB99), HEII_ionflux_SB99, label='SB99')
+    #ax.plot(np.log10(SED_times), ion_flux_HeII, label='GENEC')
     if star_formation_option == 'ISF':
         ax.plot(np.log10(times_steps), population_ion_HEII_flux_iterations, label='pySB')
     if star_formation_option == 'CSF':
@@ -3113,6 +3172,7 @@ if plot_ion_flux == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     #ax.plot(np.log10(times_SB99), Lbol_SB99, label='SB99')
+    #ax.plot(np.log10(SED_times), Lbol, label='GENEC')
     if star_formation_option == 'ISF':
         ax.plot(np.log10(times_steps), population_ion_L_flux_iterations, label='pySB')
     if star_formation_option == 'CSF':
@@ -3162,6 +3222,7 @@ if plot_wind == True:
     plt.style.use('default')
     ax=fig.add_subplot(111)
     #ax.plot(np.log10(SB99_windtimes), SB99_windpower, label='SB99')
+    #ax.plot(np.log10(SED_times), windpower, label='GENEC')
     if star_formation_option == 'ISF':
         ax.plot(times_steps_log, population_windpowers, label='pySB')
     if star_formation_option == 'CSF':
@@ -3178,6 +3239,7 @@ if plot_wind == True:
     fig=plt.figure()
     plt.style.use('default')
     ax=fig.add_subplot(111)
+    #ax.plot(np.log10(SED_times), windmom, label='GENEC')
     if star_formation_option == 'ISF':
         ax.plot(times_steps_log, population_windmoms, label='pySB')
     if star_formation_option == 'CSF':
